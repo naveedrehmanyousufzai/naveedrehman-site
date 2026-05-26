@@ -4,12 +4,31 @@ import Link from "next/link";
 export default function Home() {
   return (
     <main className="min-h-screen bg-white text-gray-900 p-8 md:p-24 max-w-4xl mx-auto">
+      
+      {/* Navigation Header with Logo */}
+      <header className="mb-12 flex items-center justify-between border-b border-gray-100 pb-6">
+        <div>
+          <Image
+            src="/logo.svg" 
+            alt="Naveed Rehman Logo"
+            width={120} // Adjust this width as needed for your SVG
+            height={40} // Adjust this height as needed
+            className="h-auto w-auto"
+            priority
+          />
+        </div>
+        <nav className="space-x-6 text-sm font-medium">
+          <Link href="/" className="hover:text-gray-500">Home</Link>
+          <Link href="/tournament" className="hover:text-gray-500">Tournament</Link>
+          <Link href="/about" className="hover:text-gray-500">About</Link>
+        </nav>
+      </header>
+
       {/* Hero Section with Image */}
       <section className="mt-10 flex flex-col md:flex-row items-center gap-12">
         <div className="flex-1 text-left">
           <h1 className="text-5xl font-bold tracking-tight">Naveed Rehman</h1>
           <h2 className="text-xl font-light mt-2 text-gray-600">Professional Squash Player</h2>
-          {/* Used Next.js safe quotation marks below */}
           <p className="text-md italic mt-4 text-gray-500">&quot;The dream is still alive&quot;</p>
         </div>
         
