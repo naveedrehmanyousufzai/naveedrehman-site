@@ -8,13 +8,11 @@ export default function Home() {
       {/* Navigation Header with Logo */}
       <header className="mb-12 flex items-center justify-between border-b border-gray-100 pb-6">
         <div>
-          <Image
+          {/* We swapped this to a standard HTML img tag for SVG compatibility */}
+          <img 
             src="/logo.svg" 
-            alt="Naveed Rehman Logo"
-            width={120} // Adjust this width as needed for your SVG
-            height={40} // Adjust this height as needed
-            className="h-auto w-auto"
-            priority
+            alt="Naveed Rehman Logo" 
+            className="h-12 w-auto" 
           />
         </div>
         <nav className="space-x-6 text-sm font-medium">
