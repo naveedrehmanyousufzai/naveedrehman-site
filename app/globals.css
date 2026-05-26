@@ -2,7 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: sans-serif;
-  color: #1f2937;
+/* Force all links to be black and remove the underline */
+a {
+  color: #000000 !important;
+  text-decoration: none !important;
+}
+
+/* Force the golden hover effect */
+a:hover {
+  color: #D4AF37 !important;
+}
+
+/* Fix the spacing for the navigation menu */
+nav {
+  display: flex !important;
+  gap: 2rem !important;
 }
