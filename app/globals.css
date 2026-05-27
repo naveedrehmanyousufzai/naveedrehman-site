@@ -1,20 +1,10 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@source "../app";
 
-/* Force all links to be black and remove the underline */
-a {
-  color: #000000 !important;
-  text-decoration: none !important;
-}
-
-/* Force the golden hover effect */
-a:hover {
-  color: #D4AF37 !important;
-}
-
-/* Fix the spacing for the navigation menu */
-nav {
-  display: flex !important;
-  gap: 2rem !important;
+html,
+body {
+  background-color: white;
+  color: black;
+  margin: 0;
+  padding: 0;
 }
