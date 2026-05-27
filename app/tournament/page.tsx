@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { client } from '@/sanity/lib/client'
 
-// Fetches tournaments from your Sanity Database and orders them by newest first
+// Fetches tournaments from Sanity and orders by newest first
 const query = `*[_type == "tournament"] | order(dateString desc)`
 
 export default async function HomePage() {
@@ -30,7 +30,6 @@ export default async function HomePage() {
 
       {/* Hero Section */}
       <section className="relative w-full bg-black text-white py-32 md:py-48 px-6 text-center overflow-hidden border-b-[1px] border-gray-800">
-        {/* Make sure your image in the public folder matches this URL name */}
         <div className="absolute inset-0 opacity-40 bg-[url('/hero-image.jpg')] bg-cover bg-center"></div>
         <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center">
           <h1 className="text-5xl md:text-7xl font-extrabold uppercase tracking-widest mb-6">
@@ -51,7 +50,7 @@ export default async function HomePage() {
           </h2>
         </div>
 
-        {/* Tournament Grid */}
+        {/* Tournament Grid with Truncation */}
         <div className="grid gap-12 w-full max-w-5xl mx-auto">
           {tournaments.length > 0 ? (
             tournaments.map((tournament: any) => (
@@ -65,12 +64,11 @@ export default async function HomePage() {
                 
                 {tournament.resultOrDescription && (
                   <div className="mt-6">
-                    {/* line-clamp-3 forces the text to stop after 3 lines */}
-                    <p className="text-black text-lg md:text-xl leading-relaxed line-clamp-3">
+                    {/* The line-clamp-3 class here ensures only 3 lines show on Homepage */}
+                    <p className="text-black text-lg md:text-xl leading-relaxed line-clamp-3 overflow-hidden">
                       {tournament.resultOrDescription}
                     </p>
                     
-                    {/* The "Read More" button */}
                     <Link 
                       href="/tournament" 
                       className="inline-flex items-center mt-4 text-[#D4AF37] font-bold uppercase tracking-wider text-sm md:text-base hover:text-black transition-colors duration-300 group"
