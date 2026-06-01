@@ -1,20 +1,19 @@
 import { createClient } from 'next-sanity';
 import { notFound } from 'next/navigation';
 
-// Initialize Sanity Client
 const client = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || 'production',
   apiVersion: '2024-05-28',
-  useCdn: false, // Forces fresh data
+  useCdn: false,
 });
 
 export const revalidate = 0; 
 
-export default async function TournamentBracketPage({ params }: { params: { slug: string } }) {
-  const { slug } = params;
+// Next.js 16 requires params to be awaited
+export default async function TournamentBracketPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
 
-  // Fetch the tournament data
   const tournament = await client.fetch(
     `*[_type == "tournament" && slug.current == $slug][0]`,
     { slug }
@@ -24,44 +23,43 @@ export default async function TournamentBracketPage({ params }: { params: { slug
     notFound();
   }
 
-  // 1. ENGINE: Group Registered Players by Category
-  const groupedPlayers: { [key: string]: any[] } = {};
-  if (tournament.playerList && tournament.playerList.length > 0) {
-    tournament.playerList.forEach((player: any) => {
-      const category = player.category || 'General';
-      if (!groupedPlayers[category]) {
-        groupedPlayers[category] = [];
-      }
-      groupedPlayers[category].push(player);
-    });
-  }
+  // BULLETPROOFING: Safely handle empty arrays
+  const playerList = tournament.playerList || [];
+  const draws = tournament.draws || [];
 
-  // 2. ENGINE: Group the linear match array into columns by round for the Bracket
+  const groupedPlayers: { [key: string]: any[] } = {};
+  playerList.forEach((player: any) => {
+    const category = player?.category || 'General';
+    if (!groupedPlayers[category]) groupedPlayers[category] = [];
+    groupedPlayers[category].push(player);
+  });
+
   const rounds: { [key: string]: any[] } = {};
   const roundNames: string[] = [];
+  draws.forEach((match: any) => {
+    const rName = match?.round || 'Unassigned Round';
+    if (!rounds[rName]) {
+      rounds[rName] = [];
+      roundNames.push(rName);
+    }
+    rounds[rName].push(match);
+  });
 
-  if (tournament.draws) {
-    tournament.draws.forEach((match: any) => {
-      if (!rounds[match.round]) {
-        rounds[match.round] = [];
-        roundNames.push(match.round);
-      }
-      rounds[match.round].push(match);
-    });
-  }
-
-  // 3. ENGINE: Helper to find a match's category based on the players in it
+  // BULLETPROOFING: Safely handle missing strings before using .replace()
   const getMatchCategory = (match: any) => {
-    if (!tournament.playerList) return 'General';
-    // Find a valid player name to look up (ignore TBD or BYE)
-    const pName = (match.player1 !== 'TBD' && match.player1 !== 'BYE') ? match.player1 
-                : (match.player2 !== 'TBD' && match.player2 !== 'BYE') ? match.player2 : null;
+    if (!playerList.length) return 'General';
     
-    if (!pName) return 'General';
+    let pName = '';
+    if (match?.player1 && match.player1 !== 'TBD' && match.player1 !== 'BYE') {
+      pName = match.player1;
+    } else if (match?.player2 && match.player2 !== 'TBD' && match.player2 !== 'BYE') {
+      pName = match.player2;
+    }
     
-    // Strip the seed bracket e.g., "[1] Naveed" -> "Naveed" to match the database
+    if (!pName || typeof pName !== 'string') return 'General';
+    
     const cleanName = pName.replace(/\[\d+\]\s/, '');
-    const playerRecord = tournament.playerList.find((p: any) => p.playerName === cleanName);
+    const playerRecord = playerList.find((p: any) => p?.playerName === cleanName);
     return playerRecord?.category || 'General';
   };
 
@@ -105,11 +103,12 @@ export default async function TournamentBracketPage({ params }: { params: { slug
                   
                   <div className="p-6 border-t border-white/5 bg-black/40 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {players
-                      .sort((a: any, b: any) => (a.playerName || '').localeCompare(b.playerName || ''))
+                      // BULLETPROOFING: Ensure playerName exists before localeCompare
+                      .sort((a: any, b: any) => (a?.playerName || '').localeCompare(b?.playerName || ''))
                       .map((p: any, i: number) => (
                       <div key={i} className="flex justify-between items-center bg-[#111] p-3 rounded border border-white/5 shadow-sm">
-                        <span className="font-medium text-gray-200">{p.playerName}</span>
-                        {p.seed && (
+                        <span className="font-medium text-gray-200">{p?.playerName || 'Unknown Player'}</span>
+                        {p?.seed && (
                           <span className="text-[10px] font-bold uppercase tracking-wider bg-[#D4AF37] text-black px-2 py-1 rounded">
                             Seed {p.seed}
                           </span>
@@ -133,49 +132,45 @@ export default async function TournamentBracketPage({ params }: { params: { slug
             Match Schedule & Results
           </h2>
           
-          {tournament.draws && tournament.draws.length > 0 ? (
+          {draws.length > 0 ? (
             <div className="flex flex-col gap-4">
-              {tournament.draws.map((match: any, idx: number) => {
-                // Determine category dynamically
+              {draws.map((match: any, idx: number) => {
                 const matchCategory = getMatchCategory(match);
-                const isComplete = match.winner && match.winner !== 'TBD' && match.winner !== '';
+                const isComplete = match?.winner && match.winner !== 'TBD' && match.winner !== '';
 
                 return (
                   <div key={idx} className="bg-[#1a1a1a] border border-white/10 rounded-lg p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-lg hover:border-[#D4AF37]/50 transition-colors">
                     
-                    {/* Left: Metadata & Category */}
                     <div className="flex flex-col gap-2 w-full md:w-1/4">
                       <span className="bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/30 text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded w-max">
                         {matchCategory}
                       </span>
                       <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">
-                        {match.round} | Match #{match.matchNumber}
+                        {match?.round} | Match #{match?.matchNumber}
                       </span>
                       <div className="flex flex-wrap gap-3 mt-1 text-[11px] text-gray-500 font-medium">
-                        {match.date && <span>📅 {match.date}</span>}
-                        {match.time && <span>⏰ {match.time}</span>}
-                        {match.court && <span className="text-[#D4AF37]">📍 {match.court}</span>}
+                        {match?.date && <span>📅 {match.date}</span>}
+                        {match?.time && <span>⏰ {match.time}</span>}
+                        {match?.court && <span className="text-[#D4AF37]">📍 {match.court}</span>}
                       </div>
                     </div>
 
-                    {/* Center: The Matchup */}
                     <div className="flex flex-col md:flex-row items-start md:items-center justify-center gap-4 w-full md:w-2/4">
-                      <div className={`text-lg md:text-xl font-bold ${match.winner === match.player1 ? 'text-[#D4AF37]' : 'text-white'}`}>
-                        {match.player1}
+                      <div className={`text-lg md:text-xl font-bold ${match?.winner === match?.player1 ? 'text-[#D4AF37]' : 'text-white'}`}>
+                        {match?.player1 || 'TBD'}
                       </div>
                       <div className="text-gray-600 text-sm font-black italic px-2">VS</div>
-                      <div className={`text-lg md:text-xl font-bold ${match.winner === match.player2 ? 'text-[#D4AF37]' : 'text-white'}`}>
-                        {match.player2}
+                      <div className={`text-lg md:text-xl font-bold ${match?.winner === match?.player2 ? 'text-[#D4AF37]' : 'text-white'}`}>
+                        {match?.player2 || 'TBD'}
                       </div>
                     </div>
 
-                    {/* Right: Score/Status */}
                     <div className="w-full md:w-1/4 flex justify-start md:justify-end">
                       {isComplete ? (
                         <div className="flex flex-col items-start md:items-end">
                           <span className="text-green-500 text-[10px] font-black uppercase tracking-widest mb-1">Final Score</span>
                           <span className="text-white font-black bg-white/5 border border-white/10 px-4 py-2 rounded">
-                            {match.score || 'Won'}
+                            {match?.score || 'Won'}
                           </span>
                         </div>
                       ) : (
@@ -202,30 +197,26 @@ export default async function TournamentBracketPage({ params }: { params: { slug
             Official Draw Bracket
           </h2>
           
-          {tournament.draws && tournament.draws.length > 0 ? (
+          {draws.length > 0 ? (
             <div className="flex gap-10 overflow-x-auto pb-10 custom-scrollbar relative">
               {roundNames.map((roundName, roundIdx) => {
                 const matchesInRound = rounds[roundName];
                 
                 return (
                   <div key={roundIdx} className="min-w-[320px] flex flex-col gap-6">
-                    {/* Round Header */}
                     <h3 className="text-center bg-[#D4AF37] text-black font-black uppercase tracking-widest py-2.5 rounded shadow-lg sticky top-0 z-20">
                       {roundName}
                     </h3>
 
-                    {/* Matches Column */}
                     <div className="flex flex-col gap-6 justify-around h-full">
                       {matchesInRound.map((match: any, idx: number) => (
                         <div key={idx} className="flex flex-col bg-[#1a1a1a] border border-white/10 rounded-lg overflow-hidden shadow-lg hover:border-[#D4AF37]/50 transition-colors relative">
                           
-                          {/* Match Number Badge */}
                           <div className="absolute top-1/2 -translate-y-1/2 -left-3 bg-[#D4AF37] text-black text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full border-2 border-[#1a1a1a] z-10 shadow-lg">
-                            {match.matchNumber || '-'}
+                            {match?.matchNumber || '-'}
                           </div>
 
-                          {/* Scheduling Metadata Bar (Date, Time, Court) */}
-                          {(match.date || match.time || match.court) && (
+                          {(match?.date || match?.time || match?.court) && (
                             <div className="bg-black/50 text-gray-400 text-[10px] font-bold uppercase tracking-wider px-4 py-2 border-b border-white/5 flex gap-3 flex-wrap pl-6">
                               {match.date && <span>📅 {match.date}</span>}
                               {match.time && <span>⏰ {match.time}</span>}
@@ -233,24 +224,22 @@ export default async function TournamentBracketPage({ params }: { params: { slug
                             </div>
                           )}
 
-                          {/* Player 1 Row */}
-                          <div className={`px-4 py-3 pl-6 flex justify-between items-center border-b border-white/5 ${match.winner === match.player1 && match.winner !== 'TBD' ? 'bg-white/5' : ''}`}>
-                            <span className={`font-medium ${match.winner === match.player1 && match.winner !== 'TBD' ? 'text-white font-bold' : 'text-gray-300'}`}>
-                              {match.player1 || 'TBD'}
+                          <div className={`px-4 py-3 pl-6 flex justify-between items-center border-b border-white/5 ${match?.winner === match?.player1 && match?.winner !== 'TBD' ? 'bg-white/5' : ''}`}>
+                            <span className={`font-medium ${match?.winner === match?.player1 && match?.winner !== 'TBD' ? 'text-white font-bold' : 'text-gray-300'}`}>
+                              {match?.player1 || 'TBD'}
                             </span>
-                            {match.score && match.winner === match.player1 && (
+                            {match?.score && match?.winner === match?.player1 && (
                               <span className="text-[#D4AF37] text-xs font-bold bg-[#D4AF37]/10 px-2.5 py-1 rounded tracking-wide border border-[#D4AF37]/20">
                                 {match.score}
                               </span>
                             )}
                           </div>
 
-                          {/* Player 2 Row */}
-                          <div className={`px-4 py-3 pl-6 flex justify-between items-center ${match.winner === match.player2 && match.winner !== 'TBD' ? 'bg-white/5' : ''}`}>
-                            <span className={`font-medium ${match.winner === match.player2 && match.winner !== 'TBD' ? 'text-white font-bold' : 'text-gray-300'}`}>
-                              {match.player2 || 'TBD'}
+                          <div className={`px-4 py-3 pl-6 flex justify-between items-center ${match?.winner === match?.player2 && match?.winner !== 'TBD' ? 'bg-white/5' : ''}`}>
+                            <span className={`font-medium ${match?.winner === match?.player2 && match?.winner !== 'TBD' ? 'text-white font-bold' : 'text-gray-300'}`}>
+                              {match?.player2 || 'TBD'}
                             </span>
-                            {match.score && match.winner === match.player2 && (
+                            {match?.score && match?.winner === match?.player2 && (
                               <span className="text-[#D4AF37] text-xs font-bold bg-[#D4AF37]/10 px-2.5 py-1 rounded tracking-wide border border-[#D4AF37]/20">
                                 {match.score}
                               </span>
