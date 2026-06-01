@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from 'next-sanity';
-import { saveDrawToDatabase } from './actions'; // Imorts the secure backend action
+import { saveDrawToDatabase, updateMatchScoreAndAdvance } from './actions';
 
-// This client only reads data, so it doesn't need a token anymore
 const client = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || 'production',
@@ -15,16 +14,19 @@ const client = createClient({
 export default function SecureGeneratorPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
-  
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [selectedTournament, setSelectedTournament] = useState('');
   const [drawSize, setDrawSize] = useState('16');
-  
   const [status, setStatus] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Phase 4 State variables
+  const [activeMatches, setActiveMatches] = useState<any[]>([]);
+  const [updatingKey, setUpdatingKey] = useState<string | null>(null);
 
   const MASTER_PASSWORD = 'squashadmin2026';
 
+  // Load available tournaments on initial render
   useEffect(() => {
     async function loadTournaments() {
       const data = await client.fetch(`*[_type == "tournament"] | order(startDate desc) { _id, title }`);
@@ -33,38 +35,62 @@ export default function SecureGeneratorPage() {
     loadTournaments();
   }, []);
 
+  // Sync and fetch active bracket info whenever selected tournament changes
+  useEffect(() => {
+    if (!selectedTournament) {
+      setActiveMatches([]);
+      return;
+    }
+    async function fetchCurrentDraw() {
+      const data = await client.fetch(`*[_type == "tournament" && _id == $id][0]{ draws }`, { id: selectedTournament });
+      if (data && data.draws) {
+        setActiveMatches(data.draws);
+      } else {
+        setActiveMatches([]);
+      }
+    }
+    fetchCurrentDraw();
+  }, [selectedTournament, status]);
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === MASTER_PASSWORD) {
-      setIsAuthenticated(true);
-    } else {
-      alert('Incorrect Password.');
+    if (password === MASTER_PASSWORD) setIsAuthenticated(true);
+    else alert('Incorrect Password.');
+  };
+
+  const handleScoreUpdate = async (matchKey: string, score: string, winner: string) => {
+    if (!winner) {
+      alert("Please designate a winning athlete before committing changes.");
+      return;
     }
+    setUpdatingKey(matchKey);
+    const res = await updateMatchScoreAndAdvance(selectedTournament, activeMatches, matchKey, score, winner);
+    if (res.success && res.updatedMatches) {
+      setActiveMatches(res.updatedMatches);
+      setStatus("Match performance committed. Bracket progression advanced.");
+    } else {
+      alert("Database Synchronization Failure: " + res.error);
+    }
+    setUpdatingKey(null);
   };
 
   const generateBracket = async () => {
-    if (!selectedTournament) {
-      setStatus('Please select a tournament.');
-      return;
-    }
-
+    if (!selectedTournament) { setStatus('Please select a tournament.'); return; }
     setIsLoading(true);
-    setStatus('Fetching player list...');
+    setStatus('Fetching player configurations...');
 
     try {
       const tournament = await client.fetch(`*[_type == "tournament" && _id == $id][0]`, { id: selectedTournament });
-      
       if (!tournament.playerList || tournament.playerList.length === 0) {
-        setStatus('Error: No players found in this tournament.');
+        setStatus('Error: Player configuration registry is blank.');
         setIsLoading(false);
         return;
       }
 
-      setStatus('Running WSF Seeding Algorithm...');
+      setStatus('Executing Seeding Distribution Grid...');
       const players = [...tournament.playerList].sort((a, b) => (a.seed || 999) - (b.seed || 999));
       let matches = [];
 
-      // ROUND ROBIN LOGIC
       if (drawSize === 'rr') {
         const numPools = players.length <= 8 ? 2 : 4;
         const poolNames = ['Pool A', 'Pool B', 'Pool C', 'Pool D'];
@@ -86,22 +112,16 @@ export default function SecureGeneratorPage() {
                     matchNumber: matchNumber,
                     player1: pool[i].seed ? `[${pool[i].seed}] ${pool[i].playerName}` : pool[i].playerName,
                     player2: pool[j].seed ? `[${pool[j].seed}] ${pool[j].playerName}` : pool[j].playerName,
-                    score: '',
-                    winner: ''
+                    score: '', winner: ''
                  });
                  matchNumber++;
               }
            }
         });
-      } 
-      // KNOCKOUT BRACKET LOGIC
-      else {
+      } else {
         const totalMatches = parseInt(drawSize);
         const lines = Array(totalMatches).fill(null);
-        
         const seededPlayers = players.filter(p => p.seed);
-        const unseededPlayers = players.filter(p => !p.seed);
-        
         const shuffleArray = (arr: any[]) => {
             const newArr = [...arr];
             for (let i = newArr.length - 1; i > 0; i--) {
@@ -112,7 +132,6 @@ export default function SecureGeneratorPage() {
         };
 
         const getPlayersBySeed = (min: number, max: number) => seededPlayers.filter(p => p.seed >= min && p.seed <= max);
-
         const slots: any = {
           8: { s1: [0], s2: [7], s3_4: [3, 4] },
           16: { s1: [0], s2: [15], s3_4: [7, 8], s5_8: [3, 4, 11, 12] },
@@ -121,20 +140,16 @@ export default function SecureGeneratorPage() {
         };
 
         const targetSlots = slots[totalMatches];
-        
         if (targetSlots.s1) { const p = getPlayersBySeed(1, 1)[0]; if(p) lines[targetSlots.s1[0]] = p; }
         if (targetSlots.s2) { const p = getPlayersBySeed(2, 2)[0]; if(p) lines[targetSlots.s2[0]] = p; }
-        
         if (targetSlots.s3_4) {
             const p34 = shuffleArray(getPlayersBySeed(3, 4));
             targetSlots.s3_4.forEach((slot: number, i: number) => { if(p34[i]) lines[slot] = p34[i]; });
         }
-        
         if (targetSlots.s5_8) {
             const p58 = shuffleArray(getPlayersBySeed(5, 8));
             targetSlots.s5_8.forEach((slot: number, i: number) => { if(p58[i]) lines[slot] = p58[i]; });
         }
-        
         if (targetSlots.s9_16) {
             const p916 = shuffleArray(getPlayersBySeed(9, 16));
             targetSlots.s9_16.forEach((slot: number, i: number) => { if(p916[i]) lines[slot] = p916[i]; });
@@ -145,25 +160,21 @@ export default function SecureGeneratorPage() {
         remainingPlayers = shuffleArray(remainingPlayers);
 
         for (let i = 0; i < lines.length; i++) {
-            if (lines[i] === null && remainingPlayers.length > 0) {
-                lines[i] = remainingPlayers.shift();
-            }
+            if (lines[i] === null && remainingPlayers.length > 0) lines[i] = remainingPlayers.shift();
         }
 
         let matchNumber = 1;
         const firstRoundName = totalMatches === 8 ? 'Quarter-Final' : `Round of ${totalMatches}`;
         
         for (let i = 0; i < totalMatches; i += 2) {
-            const p1 = lines[i];
-            const p2 = lines[i+1];
+            const p1 = lines[i]; const p2 = lines[i+1];
             matches.push({
                 _key: `match-${matchNumber}`,
                 round: firstRoundName,
                 matchNumber: matchNumber,
                 player1: p1 ? (p1.seed ? `[${p1.seed}] ${p1.playerName}` : p1.playerName) : 'BYE',
                 player2: p2 ? (p2.seed ? `[${p2.seed}] ${p2.playerName}` : p2.playerName) : 'BYE',
-                score: '',
-                winner: ''
+                score: '', winner: ''
             });
             matchNumber++;
         }
@@ -182,32 +193,22 @@ export default function SecureGeneratorPage() {
                 _key: `match-${matchNumber}`,
                 round: currentRoundName,
                 matchNumber: matchNumber,
-                player1: 'TBD',
-                player2: 'TBD',
-                score: '',
-                winner: ''
+                player1: 'TBD', player2: 'TBD',
+                score: '', winner: ''
               });
               matchNumber++;
             }
         }
       }
 
-      setStatus('Saving bracket to database securely...');
-
-      // CALLING THE SECURE SERVER ACTION HERE
+      setStatus('Saving configurations to server secure core...');
       const response = await saveDrawToDatabase(selectedTournament, matches);
-
-      if (response.success) {
-        setStatus('Success! Official bracket has been published.');
-      } else {
-        setStatus(`Database Error: ${response.error}`);
-      }
-      
+      if (response.success) setStatus('Success! Official bracket has been published.');
+      else setStatus(`Database Error: ${response.error}`);
     } catch (error) {
       console.error(error);
       setStatus('An error occurred while generating the bracket.');
     }
-    
     setIsLoading(false);
   };
 
@@ -239,7 +240,6 @@ export default function SecureGeneratorPage() {
   return (
     <main className="min-h-screen bg-[#111111] text-white pt-32 pb-20 px-6 md:px-12">
       <div className="max-w-3xl mx-auto bg-[#1a1a1a] border border-[#D4AF37]/50 rounded-lg p-10 shadow-2xl">
-        
         <div className="flex justify-between items-start border-b border-white/10 pb-6 mb-8">
           <div>
             <span className="text-[#D4AF37] font-black uppercase tracking-widest text-sm block mb-1">Authenticated</span>
@@ -294,8 +294,70 @@ export default function SecureGeneratorPage() {
             {isLoading ? 'Generating Bracket...' : 'Execute Draw Automation'}
           </button>
         </div>
-
       </div>
+
+      {/* LIVE DASHBOARD BLOCK */}
+      {selectedTournament && activeMatches.length > 0 && (
+        <div className="max-w-3xl mx-auto bg-[#1a1a1a] border border-[#D4AF37]/30 rounded-lg p-10 shadow-2xl mt-8">
+          <div className="border-b border-white/10 pb-4 mb-6">
+            <span className="text-[#D4AF37] font-black uppercase tracking-widest text-xs block mb-1">Live Interface</span>
+            <h2 className="text-2xl font-black uppercase tracking-tight">Active Match Dashboard</h2>
+          </div>
+
+          <div className="flex flex-col gap-4 max-h-[600px] overflow-y-auto pr-2">
+            {activeMatches.map((match) => {
+              if (match.player1 === 'TBD' && match.player2 === 'TBD') return null;
+
+              return (
+                <div key={match._key} className="bg-black border border-white/10 rounded p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div className="flex flex-col gap-1 w-full md:w-1/2">
+                    <span className="text-gray-500 font-bold uppercase text-[10px] tracking-wider bg-white/5 px-2 py-0.5 rounded w-max">
+                      {match.round} — Match #{match.matchNumber}
+                    </span>
+                    <div className="text-sm font-bold mt-1">
+                      <span className={match.winner === match.player1 ? "text-[#D4AF37]" : ""}>{match.player1}</span>
+                      <span className="text-gray-500 mx-2 text-xs font-normal">vs</span>
+                      <span className={match.winner === match.player2 ? "text-[#D4AF37]" : ""}>{match.player2}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 w-full md:w-1/2 justify-end">
+                    <input 
+                      type="text" 
+                      placeholder="e.g. 11-5, 11-7" 
+                      defaultValue={match.score || ''}
+                      id={`score-${match._key}`}
+                      className="bg-[#111] border border-white/10 text-white p-2 rounded text-xs w-28 outline-none focus:border-[#D4AF37]"
+                    />
+
+                    <select 
+                      defaultValue={match.winner || ''}
+                      id={`winner-${match._key}`}
+                      className="bg-[#111] border border-white/10 text-white p-2 rounded text-xs w-32 outline-none focus:border-[#D4AF37]"
+                    >
+                      <option value="">-- Winner --</option>
+                      <option value={match.player1}>{match.player1}</option>
+                      <option value={match.player2}>{match.player2}</option>
+                    </select>
+
+                    <button
+                      disabled={updatingKey === match._key}
+                      onClick={() => {
+                        const sVal = (document.getElementById(`score-${match._key}`) as HTMLInputElement).value;
+                        const wVal = (document.getElementById(`winner-${match._key}`) as HTMLSelectElement).value;
+                        handleScoreUpdate(match._key, sVal, wVal);
+                      }}
+                      className="bg-white/10 text-white hover:bg-[#D4AF37] hover:text-black font-bold uppercase tracking-wider text-[10px] px-3 py-2 rounded transition-colors"
+                    >
+                      {updatingKey === match._key ? '...' : 'Save'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
