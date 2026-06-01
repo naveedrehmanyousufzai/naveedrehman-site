@@ -1,14 +1,7 @@
-import Link from 'next/link';
 import { createClient } from 'next-sanity';
+import Link from 'next/link';
 
-// Force real-time updates
-export const revalidate = 0;
-
-export const metadata = {
-  title: 'Tournaments & Events | Naveed Rehman',
-};
-
-// Database Connection
+// Initialize Sanity Client
 const client = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || 'production',
@@ -16,112 +9,123 @@ const client = createClient({
   useCdn: false,
 });
 
-export default async function TournamentsPage() {
-  // Fetch all tournaments, now including the 'slug' to link to the details page
+export const revalidate = 0;
+
+export default async function TournamentsIndexPage() {
+  // Fetch all tournaments, sorted by date (newest first)
   const tournaments = await client.fetch(`
-    *[_type == "tournament"] | order(endDate desc) {
+    *[_type == "tournament"] | order(startDate desc) {
       _id,
       title,
-      subtitle,
+      slug,
       startDate,
       endDate,
-      location,
-      "slug": slug.current
+      finalResult
     }
   `);
 
-  // Time-travel logic: Figure out today's date to separate Upcoming vs Completed
-  const today = new Date().toISOString().split('T')[0]; // Gets YYYY-MM-DD
+  // Get today's date in YYYY-MM-DD format to compare against tournament dates
+  const today = new Date().toISOString().split('T')[0];
 
-  const upcomingEvents = tournaments.filter((t: any) => t.endDate >= today);
-  const completedEvents = tournaments.filter((t: any) => t.endDate < today);
-
-  // Helper function to make dates look pretty (e.g., "June 8, 2026")
-  const formatDate = (dateString: string) => {
-    if (!dateString) return '';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC'
-    });
-  };
+  // Engine to separate tournaments based on date
+  const upcomingTournaments = tournaments.filter((t: any) => !t.endDate || t.endDate >= today);
+  const pastTournaments = tournaments.filter((t: any) => t.endDate && t.endDate < today);
 
   return (
-    <main className="min-h-screen bg-[#111111] text-white selection:bg-[#D4AF37] selection:text-black pb-20">
-      
-      {/* Page Header */}
-      <section className="pt-32 pb-12 px-6 md:px-12 max-w-7xl mx-auto border-b border-white/10">
-        <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter drop-shadow-lg">
-          Official <span className="text-[#D4AF37]">Tournaments</span>
-        </h1>
-        <p className="mt-4 text-gray-400 text-lg max-w-2xl font-light">
-          Sanctioned events, PSA Satellite tournaments, and official championships managed by the Sindh Squash Association.
-        </p>
-      </section>
-
-      {/* Tournaments Roster */}
-      <section className="pt-12 px-6 md:px-12 max-w-7xl mx-auto">
-        <div className="flex flex-col gap-6">
-          
-          {/* UPCOMING EVENTS LOOP */}
-          {upcomingEvents.map((tourney: any) => (
-            <div key={tourney._id} className="bg-[#1a1a1a] border border-[#D4AF37]/50 rounded-lg p-6 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden shadow-lg hover:bg-[#222] transition-colors">
-              <div className="absolute top-0 left-0 w-2 h-full bg-[#D4AF37]"></div>
-              <div>
-                <span className="text-[#D4AF37] text-xs font-bold uppercase tracking-wider bg-[#D4AF37]/10 px-3 py-1 rounded-full mb-3 inline-block">
-                  Upcoming Event
-                </span>
-                <h2 className="text-2xl font-bold mb-1">{tourney.title}</h2>
-                <p className="text-gray-400 font-medium tracking-wide flex items-center gap-2 flex-wrap">
-                  <span>📅 {formatDate(tourney.startDate)} – {formatDate(tourney.endDate)}</span>
-                  {tourney.location && <span>| 📍 {tourney.location}</span>}
-                  {tourney.subtitle && <span>| {tourney.subtitle}</span>}
-                </p>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                {tourney.slug ? (
-                  <Link href={`/tournaments/${tourney.slug}`} className="bg-[#D4AF37] text-[#111111] px-6 py-3 font-bold rounded hover:bg-white transition-colors uppercase tracking-wide text-sm text-center">
-                    Event Details
-                  </Link>
-                ) : (
-                  <span className="text-gray-500 text-sm uppercase tracking-widest font-bold">Details Soon</span>
-                )}
-              </div>
-            </div>
-          ))}
-
-          {/* COMPLETED EVENTS LOOP */}
-          {completedEvents.map((tourney: any) => (
-            <div key={tourney._id} className="bg-[#1a1a1a] border border-white/5 rounded-lg p-6 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 hover:border-white/20 transition-colors">
-              <div>
-                <span className="text-gray-400 text-xs font-bold uppercase tracking-wider bg-white/5 px-3 py-1 rounded-full mb-3 inline-block">
-                  Completed
-                </span>
-                <h2 className="text-2xl font-bold mb-1 text-gray-200">{tourney.title}</h2>
-                <p className="text-gray-500 font-medium tracking-wide flex items-center gap-2 flex-wrap">
-                  <span>📅 {formatDate(tourney.startDate)} – {formatDate(tourney.endDate)}</span>
-                  {tourney.location && <span>| 📍 {tourney.location}</span>}
-                  {tourney.subtitle && <span>| {tourney.subtitle}</span>}
-                </p>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                {tourney.slug && (
-                  <Link href={`/tournaments/${tourney.slug}`} className="border border-white/20 text-white px-6 py-3 font-bold rounded hover:bg-white hover:text-[#111111] transition-colors uppercase tracking-wide text-sm text-center whitespace-nowrap">
-                    Report & Results
-                  </Link>
-                )}
-              </div>
-            </div>
-          ))}
-
-          {/* EMPTY STATE */}
-          {tournaments.length === 0 && (
-             <div className="text-center py-12 text-gray-500 font-light border border-dashed border-white/10 rounded">
-                No tournaments found. Add your events in the Command Center.
-             </div>
-          )}
-
+    <main className="min-h-screen bg-[#111111] text-white pt-32 pb-20 px-6 md:px-12">
+      <div className="max-w-[1000px] mx-auto">
+        
+        {/* NEW CAREER HEADING SECTION */}
+        <div className="mb-16 border-b border-white/10 pb-8">
+          <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter mb-4 text-white">
+            CAREER <span className="text-[#D4AF37]">ARCHIVE</span>
+          </h1>
+          <p className="text-gray-400 text-lg max-w-2xl leading-relaxed">
+            A complete record of my professional squash career, featuring upcoming fixtures, official draws, and past tournament results.
+          </p>
         </div>
-      </section>
 
+        {/* UPCOMING TOURNAMENTS SECTION */}
+        <div className="mb-16">
+          <h2 className="text-2xl font-black uppercase tracking-widest mb-6 text-[#D4AF37] flex items-center gap-3">
+            <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></span>
+            Upcoming & Active
+          </h2>
+          
+          {upcomingTournaments.length > 0 ? (
+            <div className="flex flex-col gap-4">
+              {upcomingTournaments.map((t: any) => (
+                <div key={t._id} className="bg-[#1a1a1a] border border-white/10 rounded-lg p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-lg hover:border-[#D4AF37]/50 transition-colors">
+                  <div>
+                    <span className="bg-[#D4AF37]/10 text-[#D4AF37] text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded border border-[#D4AF37]/30 mb-3 inline-block">
+                      Upcoming
+                    </span>
+                    <h3 className="text-xl font-bold text-white mb-2">{t.title}</h3>
+                    <div className="text-sm text-gray-400 font-medium flex items-center gap-2">
+                      📅 {t.startDate} {t.endDate && `– ${t.endDate}`}
+                    </div>
+                  </div>
+                  
+                  <Link 
+                    href={`/tournaments/${t.slug?.current}`}
+                    className="w-full md:w-auto text-center border border-white/20 hover:border-[#D4AF37] hover:text-[#D4AF37] bg-black/50 px-6 py-3 rounded text-sm font-bold uppercase tracking-wider transition-all"
+                  >
+                    View Details
+                  </Link>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-[#1a1a1a] border border-white/5 rounded-lg p-8 text-center text-gray-500 font-medium">
+              No upcoming tournaments currently scheduled.
+            </div>
+          )}
+        </div>
+
+        {/* PAST TOURNAMENTS SECTION */}
+        <div>
+          <h2 className="text-2xl font-black uppercase tracking-widest mb-6 text-white border-b border-white/10 pb-4">
+            Completed Tournaments
+          </h2>
+          
+          {pastTournaments.length > 0 ? (
+            <div className="flex flex-col gap-4">
+              {pastTournaments.map((t: any) => (
+                <div key={t._id} className="bg-[#111] border border-white/5 rounded-lg p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 hover:bg-white/5 transition-colors">
+                  <div>
+                    <div className="flex gap-3 mb-3">
+                      <span className="bg-white/5 text-gray-400 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded border border-white/10">
+                        Completed
+                      </span>
+                      {t.finalResult && (
+                        <span className="bg-[#D4AF37]/10 text-[#D4AF37] text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded border border-[#D4AF37]/30">
+                          {t.finalResult}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-200 mb-2">{t.title}</h3>
+                    <div className="text-sm text-gray-500 font-medium flex items-center gap-2">
+                      📅 {t.startDate} {t.endDate && `– ${t.endDate}`}
+                    </div>
+                  </div>
+                  
+                  <Link 
+                    href={`/tournaments/${t.slug?.current}`}
+                    className="w-full md:w-auto text-center border border-white/10 hover:border-white text-gray-300 px-6 py-3 rounded text-sm font-bold uppercase tracking-wider transition-all"
+                  >
+                    View Archive
+                  </Link>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-[#111] border border-white/5 rounded-lg p-8 text-center text-gray-500 font-medium">
+              No past tournaments found.
+            </div>
+          )}
+        </div>
+        
+      </div>
     </main>
   );
 }
