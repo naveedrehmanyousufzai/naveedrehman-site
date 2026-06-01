@@ -64,4 +64,4 @@ export const tournament = {
       description: 'Upload photos from the tournament here.',
     },
   ],
-};
+};// Triggering Vercel build update
