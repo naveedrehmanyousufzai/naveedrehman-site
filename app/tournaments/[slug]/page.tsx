@@ -9,7 +9,6 @@ const client = createClient({
   useCdn: false, // Forces fresh data
 });
 
-// CRITICAL: Tells Next.js not to cache this page so live scores update instantly
 export const revalidate = 0; 
 
 export default async function TournamentBracketPage({ params }: { params: { slug: string } }) {
@@ -29,7 +28,6 @@ export default async function TournamentBracketPage({ params }: { params: { slug
   const groupedPlayers: { [key: string]: any[] } = {};
   if (tournament.playerList && tournament.playerList.length > 0) {
     tournament.playerList.forEach((player: any) => {
-      // Default to 'General' if you forgot to assign a category to a player
       const category = player.category || 'General';
       if (!groupedPlayers[category]) {
         groupedPlayers[category] = [];
@@ -52,6 +50,21 @@ export default async function TournamentBracketPage({ params }: { params: { slug
     });
   }
 
+  // 3. ENGINE: Helper to find a match's category based on the players in it
+  const getMatchCategory = (match: any) => {
+    if (!tournament.playerList) return 'General';
+    // Find a valid player name to look up (ignore TBD or BYE)
+    const pName = (match.player1 !== 'TBD' && match.player1 !== 'BYE') ? match.player1 
+                : (match.player2 !== 'TBD' && match.player2 !== 'BYE') ? match.player2 : null;
+    
+    if (!pName) return 'General';
+    
+    // Strip the seed bracket e.g., "[1] Naveed" -> "Naveed" to match the database
+    const cleanName = pName.replace(/\[\d+\]\s/, '');
+    const playerRecord = tournament.playerList.find((p: any) => p.playerName === cleanName);
+    return playerRecord?.category || 'General';
+  };
+
   return (
     <main className="min-h-screen bg-[#111111] text-white pt-32 pb-20 px-6 md:px-12">
       <div className="max-w-[1400px] mx-auto">
@@ -70,10 +83,10 @@ export default async function TournamentBracketPage({ params }: { params: { slug
           </div>
         </div>
 
-        {/* NEW: REGISTERED PLAYERS CATEGORY ACCORDION */}
+        {/* REGISTERED PLAYERS CATEGORY ACCORDION */}
         <div className="mb-20">
           <h2 className="text-2xl font-black uppercase tracking-tight mb-6 border-b border-white/10 pb-4">
-            Registered Players
+            Registered Athletes
           </h2>
           
           {Object.keys(groupedPlayers).length > 0 ? (
@@ -87,14 +100,11 @@ export default async function TournamentBracketPage({ params }: { params: { slug
                         {players.length} Athletes
                       </span>
                     </div>
-                    {/* Expand/Collapse Arrow */}
                     <span className="text-white group-open:rotate-180 transition-transform duration-300">▼</span>
                   </summary>
                   
-                  {/* Expanded List View */}
                   <div className="p-6 border-t border-white/5 bg-black/40 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {players
-                      // Sort players alphabetically (or by seed if you prefer)
                       .sort((a: any, b: any) => (a.playerName || '').localeCompare(b.playerName || ''))
                       .map((p: any, i: number) => (
                       <div key={i} className="flex justify-between items-center bg-[#111] p-3 rounded border border-white/5 shadow-sm">
@@ -117,10 +127,79 @@ export default async function TournamentBracketPage({ params }: { params: { slug
           )}
         </div>
 
-        {/* BRACKET RENDERER */}
+        {/* LINEAR MATCH SCHEDULE & RESULTS COLUMN */}
+        <div className="mb-20">
+          <h2 className="text-2xl font-black uppercase tracking-tight mb-6 border-b border-white/10 pb-4">
+            Match Schedule & Results
+          </h2>
+          
+          {tournament.draws && tournament.draws.length > 0 ? (
+            <div className="flex flex-col gap-4">
+              {tournament.draws.map((match: any, idx: number) => {
+                // Determine category dynamically
+                const matchCategory = getMatchCategory(match);
+                const isComplete = match.winner && match.winner !== 'TBD' && match.winner !== '';
+
+                return (
+                  <div key={idx} className="bg-[#1a1a1a] border border-white/10 rounded-lg p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-lg hover:border-[#D4AF37]/50 transition-colors">
+                    
+                    {/* Left: Metadata & Category */}
+                    <div className="flex flex-col gap-2 w-full md:w-1/4">
+                      <span className="bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/30 text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded w-max">
+                        {matchCategory}
+                      </span>
+                      <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">
+                        {match.round} | Match #{match.matchNumber}
+                      </span>
+                      <div className="flex flex-wrap gap-3 mt-1 text-[11px] text-gray-500 font-medium">
+                        {match.date && <span>📅 {match.date}</span>}
+                        {match.time && <span>⏰ {match.time}</span>}
+                        {match.court && <span className="text-[#D4AF37]">📍 {match.court}</span>}
+                      </div>
+                    </div>
+
+                    {/* Center: The Matchup */}
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-center gap-4 w-full md:w-2/4">
+                      <div className={`text-lg md:text-xl font-bold ${match.winner === match.player1 ? 'text-[#D4AF37]' : 'text-white'}`}>
+                        {match.player1}
+                      </div>
+                      <div className="text-gray-600 text-sm font-black italic px-2">VS</div>
+                      <div className={`text-lg md:text-xl font-bold ${match.winner === match.player2 ? 'text-[#D4AF37]' : 'text-white'}`}>
+                        {match.player2}
+                      </div>
+                    </div>
+
+                    {/* Right: Score/Status */}
+                    <div className="w-full md:w-1/4 flex justify-start md:justify-end">
+                      {isComplete ? (
+                        <div className="flex flex-col items-start md:items-end">
+                          <span className="text-green-500 text-[10px] font-black uppercase tracking-widest mb-1">Final Score</span>
+                          <span className="text-white font-black bg-white/5 border border-white/10 px-4 py-2 rounded">
+                            {match.score || 'Won'}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-500 text-sm font-bold uppercase tracking-wider bg-black px-4 py-2 rounded border border-white/5">
+                          Pending
+                        </span>
+                      )}
+                    </div>
+
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="bg-[#1a1a1a] p-8 rounded-lg border border-white/10 text-center text-gray-500">
+              No matches scheduled yet.
+            </div>
+          )}
+        </div>
+
+        {/* VISUAL BRACKET RENDERER */}
         <div>
           <h2 className="text-2xl font-black uppercase tracking-tight mb-6 border-b border-white/10 pb-4">
-            Official Draw
+            Official Draw Bracket
           </h2>
           
           {tournament.draws && tournament.draws.length > 0 ? (
