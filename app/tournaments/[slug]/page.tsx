@@ -10,13 +10,20 @@ const client = createClient({
 
 export const revalidate = 0; 
 
-// Next.js 16 requires params to be awaited
 export default async function TournamentBracketPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
+  // 1. Safely await and extract the slug for Next.js 16+
+  const resolvedParams = await params;
+  const slug = resolvedParams?.slug;
 
+  // 2. BULLETPROOFING: If there is no slug in the URL, stop immediately
+  if (!slug) {
+    notFound();
+  }
+
+  // 3. Fetch from Sanity explicitly passing the slug
   const tournament = await client.fetch(
     `*[_type == "tournament" && slug.current == $slug][0]`,
-    { slug }
+    { slug: slug }
   );
 
   if (!tournament) {
