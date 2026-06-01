@@ -2,7 +2,6 @@
 
 import { createClient } from 'next-sanity';
 
-// Secure server-side client initialized dynamically inside actions
 function getServerClient() {
   return createClient({
     projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
@@ -13,32 +12,23 @@ function getServerClient() {
   });
 }
 
-// Action 1: Saves a freshly generated bracket layout
 export async function saveDrawToDatabase(tournamentId: string, matches: any[]) {
-  console.log("SERVER ACTION: Executing fresh draw generation...");
   const serverClient = getServerClient();
-
   try {
-    await serverClient
-      .patch(tournamentId)
-      .set({ draws: matches })
-      .commit();
+    await serverClient.patch(tournamentId).set({ draws: matches }).commit();
     return { success: true };
   } catch (error: any) {
-    console.error("Sanity Draw Write Error:", error);
     return { success: false, error: error.message };
   }
 }
 
-// Action 2: Saves game score and moves winner into the next bracket slot
-export async function updateMatchScoreAndAdvance(
+// UPGRADED: Now accepts a full data payload (Date, Time, Court, Score, Winner)
+export async function updateMatchDetailsAndAdvance(
   tournamentId: string, 
   currentMatches: any[], 
   matchKey: string, 
-  scoreString: string, 
-  winnerName: string
+  matchData: { score: string, winner: string, date: string, time: string, court: string }
 ) {
-  console.log(`SERVER ACTION: Updating score for match ${matchKey}...`);
   const serverClient = getServerClient();
 
   try {
@@ -47,39 +37,37 @@ export async function updateMatchScoreAndAdvance(
     
     if (matchIndex === -1) return { success: false, error: "Match not found." };
     
-    // Log the current match result
-    updatedMatches[matchIndex].score = scoreString;
-    updatedMatches[matchIndex].winner = winnerName;
+    // 1. Inject all new scheduling and result data
+    updatedMatches[matchIndex].score = matchData.score;
+    updatedMatches[matchIndex].winner = matchData.winner;
+    updatedMatches[matchIndex].date = matchData.date;
+    updatedMatches[matchIndex].time = matchData.time;
+    updatedMatches[matchIndex].court = matchData.court;
 
     const currentMatchNum = updatedMatches[matchIndex].matchNumber;
     
-    // Auto-Advancement logic for knockout progression
+    // 2. Auto-Advancement logic for knockout progression
     const firstRoundName = updatedMatches[0].round;
     const totalFirstRoundMatches = updatedMatches.filter(m => m.round === firstRoundName).length;
     
-    // Only advance if there are future rounds (it's not the final)
     if (currentMatches.length > totalFirstRoundMatches) {
       const nextMatchNum = totalFirstRoundMatches + Math.ceil(currentMatchNum / 2);
       const nextMatchIndex = updatedMatches.findIndex(m => m.matchNumber === nextMatchNum);
       
       if (nextMatchIndex !== -1) {
-        // Odd match numbers populate Player 1 slot, Even populate Player 2 slot
         if (currentMatchNum % 2 !== 0) {
-          updatedMatches[nextMatchIndex].player1 = winnerName;
+          updatedMatches[nextMatchIndex].player1 = matchData.winner;
         } else {
-          updatedMatches[nextMatchIndex].player2 = winnerName;
+          updatedMatches[nextMatchIndex].player2 = matchData.winner;
         }
       }
     }
 
-    await serverClient
-      .patch(tournamentId)
-      .set({ draws: updatedMatches })
-      .commit();
-
+    await serverClient.patch(tournamentId).set({ draws: updatedMatches }).commit();
     return { success: true, updatedMatches };
+    
   } catch (error: any) {
-    console.error("Score Update Error:", error);
+    console.error("Data Update Error:", error);
     return { success: false, error: error.message };
   }
 }

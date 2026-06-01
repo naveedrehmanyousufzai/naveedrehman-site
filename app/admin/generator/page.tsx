@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from 'next-sanity';
-import { saveDrawToDatabase, updateMatchScoreAndAdvance } from './actions';
+import { saveDrawToDatabase, updateMatchDetailsAndAdvance } from './actions';
 
 const client = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
@@ -20,13 +20,11 @@ export default function SecureGeneratorPage() {
   const [status, setStatus] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  // Phase 4 State variables
   const [activeMatches, setActiveMatches] = useState<any[]>([]);
   const [updatingKey, setUpdatingKey] = useState<string | null>(null);
 
   const MASTER_PASSWORD = 'squashadmin2026';
 
-  // Load available tournaments on initial render
   useEffect(() => {
     async function loadTournaments() {
       const data = await client.fetch(`*[_type == "tournament"] | order(startDate desc) { _id, title }`);
@@ -35,19 +33,12 @@ export default function SecureGeneratorPage() {
     loadTournaments();
   }, []);
 
-  // Sync and fetch active bracket info whenever selected tournament changes
   useEffect(() => {
-    if (!selectedTournament) {
-      setActiveMatches([]);
-      return;
-    }
+    if (!selectedTournament) { setActiveMatches([]); return; }
     async function fetchCurrentDraw() {
       const data = await client.fetch(`*[_type == "tournament" && _id == $id][0]{ draws }`, { id: selectedTournament });
-      if (data && data.draws) {
-        setActiveMatches(data.draws);
-      } else {
-        setActiveMatches([]);
-      }
+      if (data && data.draws) setActiveMatches(data.draws);
+      else setActiveMatches([]);
     }
     fetchCurrentDraw();
   }, [selectedTournament, status]);
@@ -58,16 +49,22 @@ export default function SecureGeneratorPage() {
     else alert('Incorrect Password.');
   };
 
-  const handleScoreUpdate = async (matchKey: string, score: string, winner: string) => {
-    if (!winner) {
-      alert("Please designate a winning athlete before committing changes.");
-      return;
-    }
+  // UPGRADED: Gathers all scheduling data and sends it to the engine
+  const handleUpdateMatch = async (matchKey: string) => {
+    const dateVal = (document.getElementById(`date-${matchKey}`) as HTMLInputElement).value;
+    const timeVal = (document.getElementById(`time-${matchKey}`) as HTMLInputElement).value;
+    const courtVal = (document.getElementById(`court-${matchKey}`) as HTMLInputElement).value;
+    const scoreVal = (document.getElementById(`score-${matchKey}`) as HTMLInputElement).value;
+    const winnerVal = (document.getElementById(`winner-${matchKey}`) as HTMLSelectElement).value;
+
+    const matchData = { date: dateVal, time: timeVal, court: courtVal, score: scoreVal, winner: winnerVal };
+
     setUpdatingKey(matchKey);
-    const res = await updateMatchScoreAndAdvance(selectedTournament, activeMatches, matchKey, score, winner);
+    const res = await updateMatchDetailsAndAdvance(selectedTournament, activeMatches, matchKey, matchData);
+    
     if (res.success && res.updatedMatches) {
       setActiveMatches(res.updatedMatches);
-      setStatus("Match performance committed. Bracket progression advanced.");
+      setStatus(`Match #${matchKey} scheduled/scored successfully.`);
     } else {
       alert("Database Synchronization Failure: " + res.error);
     }
@@ -91,6 +88,16 @@ export default function SecureGeneratorPage() {
       const players = [...tournament.playerList].sort((a, b) => (a.seed || 999) - (b.seed || 999));
       let matches = [];
 
+      // Unified base match object with empty schedule fields
+      const createMatchObj = (matchNum: number, roundName: string, p1: string, p2: string) => ({
+        _key: `match-${matchNum}`,
+        round: roundName,
+        matchNumber: matchNum,
+        player1: p1,
+        player2: p2,
+        score: '', winner: '', date: '', time: '', court: ''
+      });
+
       if (drawSize === 'rr') {
         const numPools = players.length <= 8 ? 2 : 4;
         const poolNames = ['Pool A', 'Pool B', 'Pool C', 'Pool D'];
@@ -106,14 +113,9 @@ export default function SecureGeneratorPage() {
         pools.forEach((pool, pIdx) => {
            for(let i=0; i<pool.length; i++){
               for(let j=i+1; j<pool.length; j++){
-                 matches.push({
-                    _key: `match-${matchNumber}`,
-                    round: poolNames[pIdx],
-                    matchNumber: matchNumber,
-                    player1: pool[i].seed ? `[${pool[i].seed}] ${pool[i].playerName}` : pool[i].playerName,
-                    player2: pool[j].seed ? `[${pool[j].seed}] ${pool[j].playerName}` : pool[j].playerName,
-                    score: '', winner: ''
-                 });
+                 const p1Str = pool[i].seed ? `[${pool[i].seed}] ${pool[i].playerName}` : pool[i].playerName;
+                 const p2Str = pool[j].seed ? `[${pool[j].seed}] ${pool[j].playerName}` : pool[j].playerName;
+                 matches.push(createMatchObj(matchNumber, poolNames[pIdx], p1Str, p2Str));
                  matchNumber++;
               }
            }
@@ -167,15 +169,9 @@ export default function SecureGeneratorPage() {
         const firstRoundName = totalMatches === 8 ? 'Quarter-Final' : `Round of ${totalMatches}`;
         
         for (let i = 0; i < totalMatches; i += 2) {
-            const p1 = lines[i]; const p2 = lines[i+1];
-            matches.push({
-                _key: `match-${matchNumber}`,
-                round: firstRoundName,
-                matchNumber: matchNumber,
-                player1: p1 ? (p1.seed ? `[${p1.seed}] ${p1.playerName}` : p1.playerName) : 'BYE',
-                player2: p2 ? (p2.seed ? `[${p2.seed}] ${p2.playerName}` : p2.playerName) : 'BYE',
-                score: '', winner: ''
-            });
+            const p1 = lines[i] ? (lines[i].seed ? `[${lines[i].seed}] ${lines[i].playerName}` : lines[i].playerName) : 'BYE';
+            const p2 = lines[i+1] ? (lines[i+1].seed ? `[${lines[i+1].seed}] ${lines[i+1].playerName}` : lines[i+1].playerName) : 'BYE';
+            matches.push(createMatchObj(matchNumber, firstRoundName, p1, p2));
             matchNumber++;
         }
 
@@ -189,13 +185,7 @@ export default function SecureGeneratorPage() {
             else currentRoundName = `Round of ${roundSize * 2}`;
 
             for (let i = 0; i < roundSize; i++) {
-              matches.push({
-                _key: `match-${matchNumber}`,
-                round: currentRoundName,
-                matchNumber: matchNumber,
-                player1: 'TBD', player2: 'TBD',
-                score: '', winner: ''
-              });
+              matches.push(createMatchObj(matchNumber, currentRoundName, 'TBD', 'TBD'));
               matchNumber++;
             }
         }
@@ -221,16 +211,8 @@ export default function SecureGeneratorPage() {
             <h1 className="text-3xl font-black uppercase tracking-tight">Draw Engine Login</h1>
           </div>
           <form onSubmit={handleLogin} className="flex flex-col gap-4">
-            <input 
-              type="password" 
-              placeholder="Enter Master Password"
-              className="bg-black border border-white/20 text-white p-4 rounded outline-none focus:border-[#D4AF37]"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <button type="submit" className="bg-[#D4AF37] text-black font-bold uppercase tracking-widest p-4 rounded hover:bg-white transition-colors">
-              Access Engine
-            </button>
+            <input type="password" placeholder="Enter Master Password" value={password} onChange={(e) => setPassword(e.target.value)} className="bg-black border border-white/20 text-white p-4 rounded outline-none focus:border-[#D4AF37]" />
+            <button type="submit" className="bg-[#D4AF37] text-black font-bold uppercase tracking-widest p-4 rounded hover:bg-white transition-colors">Access Engine</button>
           </form>
         </div>
       </main>
@@ -245,33 +227,21 @@ export default function SecureGeneratorPage() {
             <span className="text-[#D4AF37] font-black uppercase tracking-widest text-sm block mb-1">Authenticated</span>
             <h1 className="text-3xl font-black uppercase tracking-tighter">WSF Draw Generator</h1>
           </div>
-          <button onClick={() => setIsAuthenticated(false)} className="text-gray-500 hover:text-white text-sm font-bold uppercase tracking-widest transition-colors">
-            Lock System
-          </button>
+          <button onClick={() => setIsAuthenticated(false)} className="text-gray-500 hover:text-white text-sm font-bold uppercase tracking-widest transition-colors">Lock System</button>
         </div>
 
         <div className="flex flex-col gap-8">
           <div>
             <label className="text-[#D4AF37] font-bold uppercase tracking-wider text-xs block mb-3">1. Select Tournament</label>
-            <select 
-              className="w-full bg-black border border-white/20 text-white p-4 rounded outline-none focus:border-[#D4AF37]"
-              value={selectedTournament}
-              onChange={(e) => setSelectedTournament(e.target.value)}
-            >
+            <select value={selectedTournament} onChange={(e) => setSelectedTournament(e.target.value)} className="w-full bg-black border border-white/20 text-white p-4 rounded outline-none focus:border-[#D4AF37]">
               <option value="">-- Choose a Tournament --</option>
-              {tournaments.map((t) => (
-                <option key={t._id} value={t._id}>{t.title}</option>
-              ))}
+              {tournaments.map((t) => (<option key={t._id} value={t._id}>{t.title}</option>))}
             </select>
           </div>
 
           <div>
             <label className="text-[#D4AF37] font-bold uppercase tracking-wider text-xs block mb-3">2. Select Draw Format</label>
-            <select 
-              className="w-full bg-black border border-white/20 text-white p-4 rounded outline-none focus:border-[#D4AF37]"
-              value={drawSize}
-              onChange={(e) => setDrawSize(e.target.value)}
-            >
+            <select value={drawSize} onChange={(e) => setDrawSize(e.target.value)} className="w-full bg-black border border-white/20 text-white p-4 rounded outline-none focus:border-[#D4AF37]">
               <option value="8">8-Player Bracket</option>
               <option value="16">16-Player Bracket</option>
               <option value="32">32-Player Bracket</option>
@@ -280,78 +250,59 @@ export default function SecureGeneratorPage() {
             </select>
           </div>
 
-          {status && (
-            <div className={`p-4 rounded border font-medium ${status.includes('Error') ? 'bg-red-500/10 border-red-500/50 text-red-400' : status.includes('Success') ? 'bg-green-500/10 border-green-500/50 text-green-400' : 'bg-blue-500/10 border-blue-500/50 text-blue-400'}`}>
-              {status}
-            </div>
-          )}
+          {status && (<div className="p-4 rounded border font-medium bg-blue-500/10 border-blue-500/50 text-blue-400">{status}</div>)}
 
-          <button 
-            onClick={generateBracket}
-            disabled={isLoading || !selectedTournament}
-            className={`w-full font-black uppercase tracking-widest p-5 rounded transition-all duration-300 ${isLoading || !selectedTournament ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-[#D4AF37] text-black hover:bg-white hover:shadow-[0_0_20px_rgba(212,175,55,0.4)]'}`}
-          >
+          <button onClick={generateBracket} disabled={isLoading || !selectedTournament} className={`w-full font-black uppercase tracking-widest p-5 rounded transition-all duration-300 ${isLoading || !selectedTournament ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-[#D4AF37] text-black hover:bg-white hover:shadow-[0_0_20px_rgba(212,175,55,0.4)]'}`}>
             {isLoading ? 'Generating Bracket...' : 'Execute Draw Automation'}
           </button>
         </div>
       </div>
 
-      {/* LIVE DASHBOARD BLOCK */}
+      {/* EXPANDED LIVE SCHEDULER & DASHBOARD */}
       {selectedTournament && activeMatches.length > 0 && (
-        <div className="max-w-3xl mx-auto bg-[#1a1a1a] border border-[#D4AF37]/30 rounded-lg p-10 shadow-2xl mt-8">
+        <div className="max-w-[1000px] mx-auto bg-[#1a1a1a] border border-[#D4AF37]/30 rounded-lg p-10 shadow-2xl mt-8">
           <div className="border-b border-white/10 pb-4 mb-6">
             <span className="text-[#D4AF37] font-black uppercase tracking-widest text-xs block mb-1">Live Interface</span>
-            <h2 className="text-2xl font-black uppercase tracking-tight">Active Match Dashboard</h2>
+            <h2 className="text-2xl font-black uppercase tracking-tight">Master Schedule & Scoreboard</h2>
           </div>
 
-          <div className="flex flex-col gap-4 max-h-[600px] overflow-y-auto pr-2">
+          <div className="flex flex-col gap-6 max-h-[800px] overflow-y-auto pr-2">
             {activeMatches.map((match) => {
               if (match.player1 === 'TBD' && match.player2 === 'TBD') return null;
 
               return (
-                <div key={match._key} className="bg-black border border-white/10 rounded p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-                  <div className="flex flex-col gap-1 w-full md:w-1/2">
-                    <span className="text-gray-500 font-bold uppercase text-[10px] tracking-wider bg-white/5 px-2 py-0.5 rounded w-max">
-                      {match.round} — Match #{match.matchNumber}
+                <div key={match._key} className="bg-black border border-white/10 rounded-lg p-5 shadow-lg">
+                  
+                  {/* Header: Match Info & Players */}
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 pb-4 border-b border-white/5">
+                    <span className="text-[#D4AF37] font-black uppercase text-[11px] tracking-widest mb-2 md:mb-0">
+                      {match.round} | Match #{match.matchNumber}
                     </span>
-                    <div className="text-sm font-bold mt-1">
-                      <span className={match.winner === match.player1 ? "text-[#D4AF37]" : ""}>{match.player1}</span>
-                      <span className="text-gray-500 mx-2 text-xs font-normal">vs</span>
-                      <span className={match.winner === match.player2 ? "text-[#D4AF37]" : ""}>{match.player2}</span>
+                    <div className="text-lg font-bold">
+                      <span className={match.winner === match.player1 ? "text-white" : "text-gray-400"}>{match.player1}</span>
+                      <span className="text-gray-600 mx-3 text-sm font-normal italic">vs</span>
+                      <span className={match.winner === match.player2 ? "text-white" : "text-gray-400"}>{match.player2}</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 w-full md:w-1/2 justify-end">
-                    <input 
-                      type="text" 
-                      placeholder="e.g. 11-5, 11-7" 
-                      defaultValue={match.score || ''}
-                      id={`score-${match._key}`}
-                      className="bg-[#111] border border-white/10 text-white p-2 rounded text-xs w-28 outline-none focus:border-[#D4AF37]"
-                    />
-
-                    <select 
-                      defaultValue={match.winner || ''}
-                      id={`winner-${match._key}`}
-                      className="bg-[#111] border border-white/10 text-white p-2 rounded text-xs w-32 outline-none focus:border-[#D4AF37]"
-                    >
-                      <option value="">-- Winner --</option>
+                  {/* Input Grid: Scheduling & Scoring */}
+                  <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+                    <input type="date" id={`date-${match._key}`} defaultValue={match.date || ''} className="bg-[#111] border border-white/10 text-gray-400 p-2.5 rounded text-xs outline-none focus:border-[#D4AF37] focus:text-white" />
+                    <input type="time" id={`time-${match._key}`} defaultValue={match.time || ''} className="bg-[#111] border border-white/10 text-gray-400 p-2.5 rounded text-xs outline-none focus:border-[#D4AF37] focus:text-white" />
+                    <input type="text" id={`court-${match._key}`} placeholder="Court (e.g., Court 1)" defaultValue={match.court || ''} className="bg-[#111] border border-white/10 text-white p-2.5 rounded text-xs outline-none focus:border-[#D4AF37]" />
+                    <input type="text" id={`score-${match._key}`} placeholder="Score (11-5, 11-7)" defaultValue={match.score || ''} className="bg-[#111] border border-white/10 text-white p-2.5 rounded text-xs outline-none focus:border-[#D4AF37]" />
+                    
+                    <select id={`winner-${match._key}`} defaultValue={match.winner || ''} className="bg-[#111] border border-white/10 text-[#D4AF37] font-bold p-2.5 rounded text-xs outline-none focus:border-[#D4AF37]">
+                      <option value="">-- No Winner Yet --</option>
                       <option value={match.player1}>{match.player1}</option>
                       <option value={match.player2}>{match.player2}</option>
                     </select>
 
-                    <button
-                      disabled={updatingKey === match._key}
-                      onClick={() => {
-                        const sVal = (document.getElementById(`score-${match._key}`) as HTMLInputElement).value;
-                        const wVal = (document.getElementById(`winner-${match._key}`) as HTMLSelectElement).value;
-                        handleScoreUpdate(match._key, sVal, wVal);
-                      }}
-                      className="bg-white/10 text-white hover:bg-[#D4AF37] hover:text-black font-bold uppercase tracking-wider text-[10px] px-3 py-2 rounded transition-colors"
-                    >
-                      {updatingKey === match._key ? '...' : 'Save'}
+                    <button disabled={updatingKey === match._key} onClick={() => handleUpdateMatch(match._key)} className="bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/50 hover:bg-[#D4AF37] hover:text-black font-black uppercase tracking-wider text-[10px] p-2.5 rounded transition-colors w-full">
+                      {updatingKey === match._key ? 'Saving...' : 'Save Match'}
                     </button>
                   </div>
+                  
                 </div>
               );
             })}
