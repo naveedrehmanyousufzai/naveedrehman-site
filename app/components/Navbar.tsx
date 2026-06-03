@@ -1,52 +1,80 @@
+"use client"; // CRITICAL: This tells Next.js to allow clicks and state in this component!
+
+import { useState } from 'react';
 import Link from 'next/link';
-import { createClient } from 'next-sanity';
 
-// 1. Establish the connection to your secure database
-const client = createClient({
-  projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
-  dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || 'production',
-  apiVersion: '2024-05-28',
-  useCdn: false, // Ensures you see changes instantly when you upload a new logo
-});
+export default function Navbar() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-export default async function Navbar() {
-  // 2. Fetch the exact URL of the logo you uploaded in the dashboard
-  const data = await client.fetch(`*[_type == "siteSettings"][0]{ "logoUrl": logo.asset->url }`);
+  // Function to toggle the menu open/closed
+  const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
 
   return (
-    <nav className="w-full bg-white border-b-2 border-[#D4AF37] py-4 px-6 md:px-12 flex justify-between items-center sticky top-0 z-50 shadow-sm">
-      
-      {/* 3. The Logo Area - Now connected to your database */}
-      <Link href="/" className="text-3xl font-black tracking-tighter text-[#111111] flex items-center">
-        {data?.logoUrl ? (
-          <img src={data.logoUrl} alt="Naveed Rehman Logo" className="h-12 w-auto object-contain" />
-        ) : (
-          /* Fallback text just in case you ever delete the logo from the dashboard */
-          <>N<span className="text-[#D4AF37]">R</span></>
-        )}
-      </Link>
-
-      {/* The Navigation Links */}
-      <div className="hidden md:flex gap-8 items-center font-medium text-[#111111]">
-        <Link href="/tournaments" className="hover:text-[#D4AF37] transition-colors">
-          Tournaments
-        </Link>
-        <Link href="/news" className="hover:text-[#D4AF37] transition-colors">
-          News & Media
-        </Link>
-        <Link href="/about" className="hover:text-[#D4AF37] transition-colors">
-          About
-        </Link>
+    <nav className="fixed w-full z-50 bg-[#111111]/90 backdrop-blur-md border-b border-white/10 text-white transition-all">
+      <div className="max-w-[1400px] mx-auto px-6 md:px-12 h-20 flex items-center justify-between">
         
-        {/* The Action Button */}
-        <Link href="/admin" className="bg-[#D4AF37] text-white px-6 py-2 font-bold rounded hover:bg-[#111111] transition-colors">
-          Portal Login
+        {/* BRAND / LOGO */}
+        <Link href="/" className="text-xl md:text-2xl font-black uppercase tracking-tighter text-white z-50">
+          Naveed <span className="text-[#D4AF37]">Rehman</span>
         </Link>
+
+        {/* DESKTOP MENU (Hidden on Mobile) */}
+        <div className="hidden md:flex items-center gap-8 text-sm font-bold uppercase tracking-widest text-gray-300">
+          <Link href="/" className="hover:text-[#D4AF37] transition-colors">Home</Link>
+          <Link href="/tournaments" className="hover:text-[#D4AF37] transition-colors">Career Archive</Link>
+          <Link href="/about" className="hover:text-[#D4AF37] transition-colors">About</Link>
+          {/* Add any other desktop links you need right here */}
+        </div>
+
+        {/* MOBILE HAMBURGER BUTTON */}
+        <button
+          onClick={toggleMenu}
+          className="md:hidden text-white p-2 focus:outline-none z-50"
+          aria-label="Toggle Mobile Menu"
+        >
+          {isMobileMenuOpen ? (
+            // Close "X" Icon
+            <svg className="w-7 h-7 text-[#D4AF37]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            // Hamburger "3 Lines" Icon
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          )}
+        </button>
       </div>
-      
-      {/* Mobile Menu Icon */}
-      <div className="md:hidden text-[#111111] hover:text-[#D4AF37] text-2xl font-bold cursor-pointer transition-colors">
-        ☰
+
+      {/* MOBILE DROPDOWN MENU */}
+      <div 
+        className={`md:hidden absolute top-20 left-0 w-full bg-[#1a1a1a] border-b border-white/10 overflow-hidden transition-all duration-300 ease-in-out ${
+          isMobileMenuOpen ? "max-h-64 opacity-100 py-4" : "max-h-0 opacity-0 py-0"
+        }`}
+      >
+        <div className="flex flex-col px-6 gap-4 text-sm font-bold uppercase tracking-widest text-gray-300">
+          <Link 
+            href="/" 
+            onClick={toggleMenu} 
+            className="hover:text-[#D4AF37] hover:bg-white/5 p-3 rounded transition-colors"
+          >
+            Home
+          </Link>
+          <Link 
+            href="/tournaments" 
+            onClick={toggleMenu} 
+            className="hover:text-[#D4AF37] hover:bg-white/5 p-3 rounded transition-colors"
+          >
+            Career Archive
+          </Link>
+          <Link 
+            href="/about" 
+            onClick={toggleMenu} 
+            className="hover:text-[#D4AF37] hover:bg-white/5 p-3 rounded transition-colors"
+          >
+            About
+          </Link>
+        </div>
       </div>
     </nav>
   );
