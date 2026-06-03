@@ -1,15 +1,7 @@
-import Link from 'next/link';
 import { createClient } from 'next-sanity';
+import Link from 'next/link';
 
-// Force real-time updates when you publish changes in the dashboard
-export const revalidate = 0;
-
-export const metadata = {
-  title: 'Naveed Rehman | Official Platform',
-  description: 'Professional Squash Athlete & Secretary of the Sindh Squash Association.',
-};
-
-// Connect to your secure database
+// Initialize Sanity Client
 const client = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || 'production',
@@ -17,119 +9,123 @@ const client = createClient({
   useCdn: false,
 });
 
-export default async function HomePage() {
-  // 1. Fetch the background image from Global Settings
-  const settings = await client.fetch(`*[_type == "siteSettings"][0]{ 
-    "bgUrl": heroImage.asset->url,
-    title,
-    description
-  }`);
+export const revalidate = 0; 
 
-  // 2. Fetch the 3 most recent posts for the homepage media grid
-  const recentPosts = await client.fetch(`
-    *[_type == "post"] | order(_createdAt desc)[0...3] {
+export default async function HomePage() {
+  const posts = await client.fetch(`
+    *[_type == "post"] | order(publishedAt desc)[0...3] {
       _id,
       title,
-      postType,
-      "imageUrl": mainImage.asset->url
+      "imageUrl": mainImage.asset->url,
+      publishedAt,
+      slug,
+      videoUrl,
+      externalUrl,
+      link
     }
   `);
 
   return (
-    <main className="min-h-screen bg-[#111111] text-white selection:bg-[#D4AF37] selection:text-black pb-20">
-      
-      {/* --- HERO SECTION --- */}
-      <section className="relative pt-40 pb-32 px-6 md:px-12 flex flex-col items-center justify-center border-b border-white/10 min-h-[70vh] overflow-hidden">
+    <main className="min-h-screen bg-white text-black pt-32 pb-20 px-6 md:px-12">
+      <div className="max-w-[1400px] mx-auto">
         
-        {/* The Faded Background Image */}
-        {settings?.bgUrl && (
-          <div 
-            className="absolute inset-0 z-0 opacity-20" 
-            style={{
-              backgroundImage: `url(${settings.bgUrl})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }}
-          />
-        )}
-
-        {/* Gradient fades so the image blends smoothly into the dark background */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#111111]/40 via-transparent to-[#111111] z-0"></div>
-        <div className="absolute inset-0 bg-gradient-to-t from-[#111111] via-transparent to-transparent z-0"></div>
-
-        {/* Hero Text */}
-        <div className="relative z-10 text-center max-w-4xl mx-auto flex flex-col items-center mt-8">
-          <span className="text-[#D4AF37] font-bold tracking-[0.3em] uppercase text-sm mb-6 drop-shadow-md">
-            Official Platform
-          </span>
-          <h1 className="text-6xl md:text-8xl font-black uppercase tracking-tighter drop-shadow-2xl leading-none">
-            Naveed <br className="md:hidden" /><span className="text-[#D4AF37]">Rehman</span>
-          </h1>
-          <p className="mt-8 text-gray-300 text-xl max-w-2xl font-light leading-relaxed">
-            {settings?.description || "Professional Squash Athlete & Secretary of the Sindh Squash Association."}
-          </p>
-
-          {/* Quick Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 mt-10">
-            <Link href="/about" className="bg-[#D4AF37] text-[#111111] px-8 py-4 font-bold rounded hover:bg-white transition-colors uppercase tracking-wide text-sm">
-              Athlete Profile
-            </Link>
-            <Link href="/tournaments" className="border border-white/30 text-white px-8 py-4 font-bold rounded hover:bg-white hover:text-[#111111] transition-colors uppercase tracking-wide text-sm">
-              View Tournaments
-            </Link>
+        {/* HERO SECTION */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-12 mb-24 border-b-2 border-[#D4AF37]/20 pb-16">
+          <div className="max-w-3xl">
+            <span className="text-[#D4AF37] font-black uppercase tracking-widest text-sm block mb-4">
+              Official Platform
+            </span>
+            <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter mb-6 leading-tight text-black">
+              NAVEED <span className="text-[#D4AF37]">REHMAN</span>
+            </h1>
+            <p className="text-gray-600 text-lg md:text-xl font-medium max-w-2xl leading-relaxed mb-8">
+              Professional Squash Athlete & Secretary of the Sindh Squash Association. Explore official tournament draws, career archives, and the latest media updates.
+            </p>
+            <div className="flex flex-wrap gap-4">
+              <Link 
+                href="/tournaments" 
+                className="bg-[#D4AF37] hover:bg-black text-white font-black uppercase tracking-widest px-8 py-4 rounded transition-colors text-sm shadow-md"
+              >
+                Career Archive
+              </Link>
+              <Link 
+                href="/about" 
+                className="bg-white hover:bg-gray-50 border-2 border-[#D4AF37] text-black font-bold uppercase tracking-widest px-8 py-4 rounded transition-colors text-sm shadow-sm"
+              >
+                Athlete Profile
+              </Link>
+            </div>
           </div>
         </div>
-      </section>
 
-      {/* --- LATEST MEDIA GRID --- */}
-      <section className="pt-24 px-6 md:px-12 max-w-7xl mx-auto">
-        <div className="flex justify-between items-end mb-10 border-b border-white/10 pb-4">
-          <h2 className="text-3xl font-black uppercase tracking-tight">Latest <span className="text-[#D4AF37]">Updates</span></h2>
-          <Link href="/news" className="text-sm font-bold text-gray-400 hover:text-[#D4AF37] uppercase tracking-wider transition-colors">
-            View All →
-          </Link>
-        </div>
+        {/* LATEST UPDATES / MEDIA SECTION */}
+        <div>
+          <div className="flex justify-between items-end mb-8 border-b-2 border-[#D4AF37]/20 pb-4">
+            <h2 className="text-2xl font-black uppercase tracking-tight text-black">
+              Latest Updates
+            </h2>
+          </div>
+          
+          {posts.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {posts.map((post: any) => {
+                const directLink = post.videoUrl || post.externalUrl || post.link || `/media/${post.slug?.current}`;
+                const isExternal = directLink.startsWith('http');
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {recentPosts.length > 0 ? (
-            recentPosts.map((post: any) => (
-              <div key={post._id} className="bg-[#1a1a1a] border border-white/5 rounded-lg overflow-hidden hover:border-[#D4AF37]/50 transition-colors duration-300 flex flex-col shadow-lg">
-                
-                {/* Image Logic */}
-                {post.imageUrl ? (
-                  <div className="h-48 w-full bg-[#111]">
-                    <img src={post.imageUrl} alt={post.title} className="w-full h-full object-cover opacity-80 hover:opacity-100 transition-opacity" />
-                  </div>
-                ) : (
-                  <div className="h-48 w-full bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] flex items-center justify-center border-b border-white/10">
-                    <span className="text-white/20 text-5xl">📰</span>
-                  </div>
-                )}
+                return (
+                  <a
+                    key={post._id}
+                    href={directLink}
+                    target={isExternal ? "_blank" : "_self"}
+                    rel={isExternal ? "noopener noreferrer" : ""}
+                    className="group block bg-white rounded-lg overflow-hidden border-2 border-[#D4AF37]/30 hover:border-[#D4AF37] hover:-translate-y-1 transition-all duration-300 shadow-lg cursor-pointer"
+                  >
+                    
+                    {/* Image Box */}
+                    <div className="relative aspect-video overflow-hidden border-b-2 border-[#D4AF37]/20 bg-gray-100">
+                      <img
+                        src={post.imageUrl || '/placeholder.jpg'}
+                        alt={post.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      
+                      {/* Play Button Overlay */}
+                      <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-full bg-[#D4AF37] text-white flex items-center justify-center scale-90 group-hover:scale-110 transition-transform shadow-lg opacity-0 group-hover:opacity-100 font-black pl-1">
+                          ▶
+                        </div>
+                      </div>
+                    </div>
 
-                <div className="p-6 flex flex-col flex-grow">
-                  <span className="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-4 inline-block bg-white/10 text-gray-300 self-start">
-                    {post.postType === 'video' ? '▶ Video' : post.postType === 'photo' ? '📷 Photo' : '📰 Article'}
-                  </span>
-                  <h3 className="text-xl font-bold mb-6 leading-snug">
-                    {post.title}
-                  </h3>
-                  
-                  <div className="mt-auto pt-4 border-t border-white/5">
-                    <Link href="/news" className="text-[#D4AF37] text-sm font-semibold hover:text-white transition-colors">
-                      Open in Archive →
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            ))
+                    {/* Text Box */}
+                    <div className="p-6 flex flex-col justify-between h-[180px]">
+                      <div>
+                        <div className="text-[10px] text-[#D4AF37] font-bold uppercase tracking-widest mb-2">
+                          {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : 'Recent'}
+                        </div>
+                        <h3 className="text-lg font-bold text-black group-hover:text-[#D4AF37] transition-colors line-clamp-2">
+                          {post.title}
+                        </h3>
+                      </div>
+                      
+                      {/* Visual Call to Action */}
+                      <div className="mt-4 text-xs font-black uppercase tracking-widest text-gray-500 group-hover:text-[#D4AF37] transition-colors flex items-center gap-2">
+                        {isExternal ? 'Watch Video' : 'Read More'} <span className="group-hover:translate-x-1 transition-transform">→</span>
+                      </div>
+                    </div>
+                    
+                  </a>
+                );
+              })}
+            </div>
           ) : (
-             <div className="col-span-full text-center py-12 text-gray-500 font-light border border-dashed border-white/10 rounded">
-               No recent updates found. Head to the Command Center to publish news.
-             </div>
+            <div className="bg-white p-12 rounded-lg border-2 border-[#D4AF37]/30 text-center text-gray-500 font-medium">
+              No recent updates published yet.
+            </div>
           )}
         </div>
-      </section>
 
+      </div>
     </main>
   );
 }
