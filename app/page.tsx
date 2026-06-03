@@ -36,14 +36,15 @@ export default async function HomePage() {
       <div className="max-w-[1400px] mx-auto">
         
         {/* HERO SECTION */}
-        <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-12 mb-24 border-b-2 border-[#D4AF37]/20 pb-16 pt-8">
+        {/* Changed to z-0 so it no longer hides behind the white background */}
+        <div className="relative z-0 flex flex-col md:flex-row items-start md:items-center justify-between gap-12 mb-24 border-b-2 border-[#D4AF37]/20 pb-16 pt-8">
           
           {/* THE RESTORED BACKGROUND IMAGE */}
-          <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+          <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
             <img 
-              src="/hero.png" 
+              src="/squash-bg.png" /* <--- IF YOU DID NOT RENAME IT EARLIER, CHANGE THIS BACK TO "/hero.png" */
               alt="Squash Court Background" 
-              className="w-full h-full object-cover opacity-100" /* <--- OPACITY IS AT 100% SO IT IS FULLY VISIBLE */
+              className="w-full h-full object-cover opacity-100" 
             />
             {/* Gradient fades the bottom of the image smoothly into the white page */}
             <div className="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-transparent"></div>
@@ -51,6 +52,7 @@ export default async function HomePage() {
             <div className="absolute top-1/2 left-0 -translate-y-1/2 w-[600px] h-[300px] bg-[#D4AF37] opacity-[0.05] rounded-full blur-3xl"></div>
           </div>
 
+          {/* Changed to z-10 so the text sits on top of the image */}
           <div className="max-w-3xl relative z-10">
             <span className="text-[#D4AF37] font-black uppercase tracking-widest text-sm block mb-4">
               Official Platform
