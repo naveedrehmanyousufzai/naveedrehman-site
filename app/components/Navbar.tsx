@@ -1,4 +1,4 @@
-"use client"; // CRITICAL: This tells Next.js to allow clicks and state in this component!
+"use client";
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -14,8 +14,14 @@ export default function Navbar() {
       <div className="max-w-[1400px] mx-auto px-6 md:px-12 h-20 flex items-center justify-between">
         
         {/* BRAND / LOGO */}
-        <Link href="/" className="text-xl md:text-2xl font-black uppercase tracking-tighter text-white z-50">
-          Naveed <span className="text-[#D4AF37]">Rehman</span>
+        <Link href="/" className="z-50 flex items-center">
+          <img 
+            src="/logo.svg" 
+            alt="Naveed Rehman Logo" 
+            className="h-10 md:h-12 w-auto object-contain" 
+            // Tip: If your logo is dark and blends into the black header, 
+            // add "brightness-0 invert" to the className above to make it white!
+          />
         </Link>
 
         {/* DESKTOP MENU (Hidden on Mobile) */}
@@ -23,7 +29,6 @@ export default function Navbar() {
           <Link href="/" className="hover:text-[#D4AF37] transition-colors">Home</Link>
           <Link href="/tournaments" className="hover:text-[#D4AF37] transition-colors">Career Archive</Link>
           <Link href="/about" className="hover:text-[#D4AF37] transition-colors">About</Link>
-          {/* Add any other desktop links you need right here */}
         </div>
 
         {/* MOBILE HAMBURGER BUTTON */}
