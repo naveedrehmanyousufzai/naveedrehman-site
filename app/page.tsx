@@ -12,25 +12,30 @@ const client = createClient({
 export const revalidate = 0; 
 
 export default async function HomePage() {
-  // Fetch up to 30 posts, now including the dedicated video thumbnail
+  // 1. Fetching the exact fields from your new Smart Schema
   const posts = await client.fetch(`
     *[_type == "post"] | order(publishedAt desc)[0...30] {
       _id,
       title,
       "imageUrl": mainImage.asset->url,
       "videoThumbnailUrl": videoThumbnail.asset->url,
-      publishedAt,
-      slug,
-      videoUrl,
-      externalUrl,
-      link
+      postType,
+      youtubeLink,
+      externalLink,
+      publishedAt
     }
   `);
 
-  // SORTING LOGIC
-  const videos = posts.filter((post: any) => post.videoUrl).slice(0, 3);
-  const articles = posts.filter((post: any) => !post.videoUrl && (post.externalUrl || post.link)).slice(0, 3);
-  const pictures = posts.filter((post: any) => !post.videoUrl && !post.externalUrl && !post.link && post.imageUrl).slice(0, 6);
+  // 2. SORTING LOGIC (Now using your postType radio buttons!)
+  
+  // Videos: Must have postType 'video' (or a youtubeLink as a fallback for older posts)
+  const videos = posts.filter((post: any) => post.postType === 'video' || post.youtubeLink).slice(0, 3);
+  
+  // Articles: Must have postType 'article'
+  const articles = posts.filter((post: any) => post.postType === 'article' || (!post.postType && post.externalLink)).slice(0, 3);
+  
+  // Pictures: Must have postType 'photo'
+  const pictures = posts.filter((post: any) => post.postType === 'photo' || (!post.postType && !post.youtubeLink && !post.externalLink && post.imageUrl)).slice(0, 6);
 
   return (
     <main className="min-h-screen bg-white text-black pt-32 pb-20 px-6 md:px-12">
@@ -78,13 +83,12 @@ export default async function HomePage() {
               {videos.map((post: any) => (
                 <a
                   key={post._id}
-                  href={post.videoUrl}
+                  href={post.youtubeLink || '#'}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="group block bg-white rounded-lg overflow-hidden border-2 border-[#D4AF37]/30 hover:border-[#D4AF37] hover:-translate-y-1 transition-all duration-300 shadow-lg"
                 >
                   <div className="relative aspect-video overflow-hidden border-b-2 border-[#D4AF37]/20 bg-gray-100">
-                    {/* Updated Image logic: Prioritizes the dedicated Video Thumbnail, falls back to Main Image */}
                     <img
                       src={post.videoThumbnailUrl || post.imageUrl || '/placeholder.jpg'}
                       alt={post.title}
@@ -125,7 +129,7 @@ export default async function HomePage() {
           {articles.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {articles.map((post: any) => {
-                const articleLink = post.externalUrl || post.link || "/news";
+                const articleLink = post.externalLink || "/news";
                 return (
                   <a
                     key={post._id}
