@@ -25,6 +25,7 @@ export default function Navbar() {
         {/* DESKTOP MENU */}
         <div className="hidden md:flex items-center gap-8 text-sm font-bold uppercase tracking-widest text-gray-800">
           <Link href="/" className="hover:text-[#D4AF37] transition-colors">Home</Link>
+          <Link href="/news" className="hover:text-[#D4AF37] transition-colors">News</Link>
           <Link href="/tournaments" className="hover:text-[#D4AF37] transition-colors">Career Archive</Link>
           <Link href="/about" className="hover:text-[#D4AF37] transition-colors">About</Link>
         </div>
@@ -62,6 +63,13 @@ export default function Navbar() {
             className="hover:text-[#D4AF37] hover:bg-gray-50 border border-transparent hover:border-[#D4AF37]/30 p-3 rounded transition-all"
           >
             Home
+          </Link>
+          <Link 
+            href="/news" 
+            onClick={toggleMenu} 
+            className="hover:text-[#D4AF37] hover:bg-gray-50 border border-transparent hover:border-[#D4AF37]/30 p-3 rounded transition-all"
+          >
+            News
           </Link>
           <Link 
             href="/tournaments" 

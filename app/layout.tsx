@@ -20,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.className} min-h-screen flex flex-col bg-[#111111]`}>
+      <body className={`${inter.className} min-h-screen flex flex-col bg-white text-black`}>
         
         {/* The Navbar stays sticky at the top */}
         <Navbar />
