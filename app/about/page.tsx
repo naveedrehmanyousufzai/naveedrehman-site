@@ -66,7 +66,8 @@ export default async function AboutPage() {
 
             <div className="grid grid-cols-2 gap-4 mt-4">
               <div className="bg-white p-6 rounded-lg border-2 border-gray-100 shadow-sm text-center flex flex-col justify-center">
-                <span className="text-4xl font-black text-black">{worldRanking}</span>
+                {/* Restored World Ranking to Gold */}
+                <span className="text-4xl font-black text-[#D4AF37]">{worldRanking}</span>
                 <span className="text-xs uppercase tracking-widest text-gray-500 mt-2 font-bold">Career High PSA</span>
               </div>
               <div className="bg-white p-6 rounded-lg border-2 border-[#D4AF37]/40 shadow-sm text-center flex flex-col justify-center">
@@ -79,7 +80,8 @@ export default async function AboutPage() {
           {/* THE ADMINISTRATOR */}
           <div className="flex flex-col gap-6 mt-12 lg:mt-0">
             <div className="border-b-2 border-gray-200 pb-4 inline-block self-start">
-              <span className="text-sm font-bold tracking-[0.2em] uppercase text-gray-400">02. The Builder</span>
+              {/* Restored the "02. The Builder" tag to Gold */}
+              <span className="text-sm font-bold tracking-[0.2em] uppercase text-[#D4AF37]">02. The Builder</span>
               <h2 className="text-4xl font-black uppercase tracking-tight mt-2 text-black">Association <br/>Secretary</h2>
             </div>
             
@@ -88,7 +90,8 @@ export default async function AboutPage() {
             </p>
 
             <div className="bg-gray-50 p-6 md:p-8 rounded-lg border-2 border-[#D4AF37]/20 mt-4 shadow-sm">
-              <h3 className="text-xl font-bold mb-4 uppercase tracking-wide text-black">Key Initiatives</h3>
+              {/* Restored the Key Initiatives header to Gold */}
+              <h3 className="text-xl font-bold mb-4 uppercase tracking-wide text-[#D4AF37]">Key Initiatives</h3>
               <ul className="space-y-4">
                 {initiatives.map((item: string, index: number) => (
                   <li key={index} className="flex items-start gap-3">
@@ -105,9 +108,10 @@ export default async function AboutPage() {
 
       {/* Call to Action Banner */}
       <section className="mt-24 px-6 md:px-12 max-w-5xl mx-auto">
-        <div className="bg-gradient-to-r from-[#D4AF37] to-[#b5952f] rounded-xl p-10 md:p-16 text-center text-black shadow-lg">
-          <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight mb-4 text-black">Connect With The Court</h2>
-          <p className="text-lg md:text-xl font-medium mb-8 max-w-2xl mx-auto text-black/80">
+        <div className="bg-gradient-to-r from-[#D4AF37] to-[#b5952f] rounded-xl p-10 md:p-16 text-center text-white shadow-lg">
+          {/* Made the text pure white inside the gold banner so it contrasts beautifully */}
+          <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight mb-4 text-white">Connect With The Court</h2>
+          <p className="text-lg md:text-xl font-medium mb-8 max-w-2xl mx-auto text-white/90">
             Whether for press inquiries, sponsorship, or association matters, my team is ready to connect.
           </p>
           <div className="flex justify-center gap-4">
