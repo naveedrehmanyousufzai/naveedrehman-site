@@ -19,8 +19,8 @@ export default function Navbar() {
             src="/logo.svg" 
             alt="Naveed Rehman Logo" 
             className="h-10 md:h-12 w-auto object-contain" 
-            // Tip: If your logo is dark and blends into the black header, 
-            // add "brightness-0 invert" to the className above to make it white!
+            // Note: If your SVG has black text and disappears into the dark header, 
+            // change the className above to: "h-10 md:h-12 w-auto object-contain brightness-0 invert"
           />
         </Link>
 
