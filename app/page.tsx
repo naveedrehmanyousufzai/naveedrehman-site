@@ -12,7 +12,7 @@ const client = createClient({
 export const revalidate = 0; 
 
 export default async function HomePage() {
-  // 1. Fetching the exact fields from your new Smart Schema
+  // 1. Fetching the exact fields from your Smart Schema
   const posts = await client.fetch(`
     *[_type == "post"] | order(publishedAt desc)[0...30] {
       _id,
@@ -26,15 +26,9 @@ export default async function HomePage() {
     }
   `);
 
-  // 2. SORTING LOGIC (Now using your postType radio buttons!)
-  
-  // Videos: Must have postType 'video' (or a youtubeLink as a fallback for older posts)
+  // 2. SORTING LOGIC (Using your postType radio buttons)
   const videos = posts.filter((post: any) => post.postType === 'video' || post.youtubeLink).slice(0, 3);
-  
-  // Articles: Must have postType 'article'
   const articles = posts.filter((post: any) => post.postType === 'article' || (!post.postType && post.externalLink)).slice(0, 3);
-  
-  // Pictures: Must have postType 'photo'
   const pictures = posts.filter((post: any) => post.postType === 'photo' || (!post.postType && !post.youtubeLink && !post.externalLink && post.imageUrl)).slice(0, 6);
 
   return (
@@ -42,8 +36,22 @@ export default async function HomePage() {
       <div className="max-w-[1400px] mx-auto">
         
         {/* HERO SECTION */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-12 mb-24 border-b-2 border-[#D4AF37]/20 pb-16">
-          <div className="max-w-3xl">
+        <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-12 mb-24 border-b-2 border-[#D4AF37]/20 pb-16 pt-8">
+          
+          {/* THE RESTORED BACKGROUND IMAGE */}
+          <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+            <img 
+              src="/cover.jpg" /* <-- REPLACE "/cover.jpg" WITH YOUR ACTUAL IMAGE FILE NAME */
+              alt="Squash Court Background" 
+              className="w-full h-full object-cover opacity-[0.08]" 
+            />
+            {/* Gradient fades the bottom of the image smoothly into the white page */}
+            <div className="absolute inset-0 bg-gradient-to-t from-white via-white/50 to-transparent"></div>
+            {/* Adds a slight golden glow behind the text */}
+            <div className="absolute top-1/2 left-0 -translate-y-1/2 w-[600px] h-[300px] bg-[#D4AF37] opacity-[0.03] rounded-full blur-3xl"></div>
+          </div>
+
+          <div className="max-w-3xl relative z-10">
             <span className="text-[#D4AF37] font-black uppercase tracking-widest text-sm block mb-4">
               Official Platform
             </span>
