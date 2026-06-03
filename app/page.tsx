@@ -36,13 +36,13 @@ export default async function HomePage() {
       <div className="max-w-[1400px] mx-auto">
         
         {/* HERO SECTION */}
-        {/* Changed to z-0 so it no longer hides behind the white background */}
+        {/* z-0 ensures this entire block sits on top of the white background */}
         <div className="relative z-0 flex flex-col md:flex-row items-start md:items-center justify-between gap-12 mb-24 border-b-2 border-[#D4AF37]/20 pb-16 pt-8">
           
-          {/* THE RESTORED BACKGROUND IMAGE */}
+          {/* BACKGROUND IMAGE CONTAINER */}
           <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
             <img 
-              src="/squash-bg.png" /* <--- IF YOU DID NOT RENAME IT EARLIER, CHANGE THIS BACK TO "/hero.png" */
+              src="/hero.png" /* <--- Perfectly matches your GitHub repository */
               alt="Squash Court Background" 
               className="w-full h-full object-cover opacity-100" 
             />
@@ -52,7 +52,8 @@ export default async function HomePage() {
             <div className="absolute top-1/2 left-0 -translate-y-1/2 w-[600px] h-[300px] bg-[#D4AF37] opacity-[0.05] rounded-full blur-3xl"></div>
           </div>
 
-          {/* Changed to z-10 so the text sits on top of the image */}
+          {/* TEXT CONTAINER */}
+          {/* z-10 ensures your text stays clearly readable on top of the image */}
           <div className="max-w-3xl relative z-10">
             <span className="text-[#D4AF37] font-black uppercase tracking-widest text-sm block mb-4">
               Official Platform
