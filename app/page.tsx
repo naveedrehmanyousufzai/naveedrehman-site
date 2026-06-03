@@ -12,11 +12,13 @@ const client = createClient({
 export const revalidate = 0; 
 
 export default async function HomePage() {
+  // Fetch up to 30 posts, now including the dedicated video thumbnail
   const posts = await client.fetch(`
-    *[_type == "post"] | order(publishedAt desc)[0...3] {
+    *[_type == "post"] | order(publishedAt desc)[0...30] {
       _id,
       title,
       "imageUrl": mainImage.asset->url,
+      "videoThumbnailUrl": videoThumbnail.asset->url,
       publishedAt,
       slug,
       videoUrl,
@@ -24,6 +26,11 @@ export default async function HomePage() {
       link
     }
   `);
+
+  // SORTING LOGIC
+  const videos = posts.filter((post: any) => post.videoUrl).slice(0, 3);
+  const articles = posts.filter((post: any) => !post.videoUrl && (post.externalUrl || post.link)).slice(0, 3);
+  const pictures = posts.filter((post: any) => !post.videoUrl && !post.externalUrl && !post.link && post.imageUrl).slice(0, 6);
 
   return (
     <main className="min-h-screen bg-white text-black pt-32 pb-20 px-6 md:px-12">
@@ -58,70 +65,139 @@ export default async function HomePage() {
           </div>
         </div>
 
-        {/* LATEST UPDATES / MEDIA SECTION */}
-        <div>
+        {/* --- SECTION 1: YOUTUBE VIDEOS --- */}
+        <div className="mb-20">
           <div className="flex justify-between items-end mb-8 border-b-2 border-[#D4AF37]/20 pb-4">
             <h2 className="text-2xl font-black uppercase tracking-tight text-black">
-              Latest Updates
+              Latest Videos
             </h2>
           </div>
           
-          {posts.length > 0 ? (
+          {videos.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {posts.map((post: any) => {
-                const directLink = post.videoUrl || post.externalUrl || post.link || `/media/${post.slug?.current}`;
-                const isExternal = directLink.startsWith('http');
+              {videos.map((post: any) => (
+                <a
+                  key={post._id}
+                  href={post.videoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group block bg-white rounded-lg overflow-hidden border-2 border-[#D4AF37]/30 hover:border-[#D4AF37] hover:-translate-y-1 transition-all duration-300 shadow-lg"
+                >
+                  <div className="relative aspect-video overflow-hidden border-b-2 border-[#D4AF37]/20 bg-gray-100">
+                    {/* Updated Image logic: Prioritizes the dedicated Video Thumbnail, falls back to Main Image */}
+                    <img
+                      src={post.videoThumbnailUrl || post.imageUrl || '/placeholder.jpg'}
+                      alt={post.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                      <div className="w-14 h-14 rounded-full bg-[#D4AF37] text-white flex items-center justify-center scale-90 group-hover:scale-110 transition-transform shadow-lg opacity-90 font-black pl-1">
+                        ▶
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <h3 className="text-lg font-bold text-black group-hover:text-[#D4AF37] transition-colors line-clamp-2 mb-3">
+                      {post.title}
+                    </h3>
+                    <div className="text-xs font-black uppercase tracking-widest text-gray-500 group-hover:text-[#D4AF37] transition-colors flex items-center gap-2">
+                      Watch on YouTube <span className="group-hover:translate-x-1 transition-transform">→</span>
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          ) : (
+             <div className="bg-gray-50 p-8 rounded border-2 border-dashed border-[#D4AF37]/30 text-center text-gray-500 font-medium">
+               No videos published yet.
+             </div>
+          )}
+        </div>
 
+        {/* --- SECTION 2: NEWS ARTICLES --- */}
+        <div className="mb-20">
+          <div className="flex justify-between items-end mb-8 border-b-2 border-[#D4AF37]/20 pb-4">
+            <h2 className="text-2xl font-black uppercase tracking-tight text-black">
+              News & Articles
+            </h2>
+          </div>
+          
+          {articles.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {articles.map((post: any) => {
+                const articleLink = post.externalUrl || post.link || "/news";
                 return (
                   <a
                     key={post._id}
-                    href={directLink}
-                    target={isExternal ? "_blank" : "_self"}
-                    rel={isExternal ? "noopener noreferrer" : ""}
-                    className="group block bg-white rounded-lg overflow-hidden border-2 border-[#D4AF37]/30 hover:border-[#D4AF37] hover:-translate-y-1 transition-all duration-300 shadow-lg cursor-pointer"
+                    href={articleLink}
+                    target={articleLink.startsWith('http') ? "_blank" : "_self"}
+                    rel={articleLink.startsWith('http') ? "noopener noreferrer" : ""}
+                    className="group block bg-white rounded-lg overflow-hidden border-2 border-gray-200 hover:border-[#D4AF37] hover:-translate-y-1 transition-all duration-300 shadow-sm hover:shadow-lg"
                   >
-                    
-                    {/* Image Box */}
-                    <div className="relative aspect-video overflow-hidden border-b-2 border-[#D4AF37]/20 bg-gray-100">
+                    <div className="relative h-48 overflow-hidden bg-gray-100">
                       <img
                         src={post.imageUrl || '/placeholder.jpg'}
                         alt={post.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
-                      
-                      {/* Play Button Overlay */}
-                      <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors flex items-center justify-center">
-                        <div className="w-12 h-12 rounded-full bg-[#D4AF37] text-white flex items-center justify-center scale-90 group-hover:scale-110 transition-transform shadow-lg opacity-0 group-hover:opacity-100 font-black pl-1">
-                          ▶
-                        </div>
+                    </div>
+                    <div className="p-6">
+                      <div className="text-[10px] text-[#D4AF37] font-bold uppercase tracking-widest mb-2">
+                        {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : 'Recent Update'}
+                      </div>
+                      <h3 className="text-lg font-bold text-black group-hover:text-[#D4AF37] transition-colors line-clamp-2 mb-3">
+                        {post.title}
+                      </h3>
+                      <div className="text-xs font-black uppercase tracking-widest text-gray-500 group-hover:text-[#D4AF37] transition-colors flex items-center gap-2">
+                        Read Article <span className="group-hover:translate-x-1 transition-transform">→</span>
                       </div>
                     </div>
-
-                    {/* Text Box */}
-                    <div className="p-6 flex flex-col justify-between h-[180px]">
-                      <div>
-                        <div className="text-[10px] text-[#D4AF37] font-bold uppercase tracking-widest mb-2">
-                          {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : 'Recent'}
-                        </div>
-                        <h3 className="text-lg font-bold text-black group-hover:text-[#D4AF37] transition-colors line-clamp-2">
-                          {post.title}
-                        </h3>
-                      </div>
-                      
-                      {/* Visual Call to Action */}
-                      <div className="mt-4 text-xs font-black uppercase tracking-widest text-gray-500 group-hover:text-[#D4AF37] transition-colors flex items-center gap-2">
-                        {isExternal ? 'Watch Video' : 'Read More'} <span className="group-hover:translate-x-1 transition-transform">→</span>
-                      </div>
-                    </div>
-                    
                   </a>
                 );
               })}
             </div>
           ) : (
-            <div className="bg-white p-12 rounded-lg border-2 border-[#D4AF37]/30 text-center text-gray-500 font-medium">
-              No recent updates published yet.
+             <div className="bg-gray-50 p-8 rounded border-2 border-dashed border-[#D4AF37]/30 text-center text-gray-500 font-medium">
+               No articles published yet.
+             </div>
+          )}
+        </div>
+
+        {/* --- SECTION 3: PICTURE GALLERY --- */}
+        <div>
+          <div className="flex justify-between items-end mb-8 border-b-2 border-[#D4AF37]/20 pb-4">
+            <h2 className="text-2xl font-black uppercase tracking-tight text-black">
+              Latest Pictures
+            </h2>
+          </div>
+          
+          {pictures.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {pictures.map((post: any) => (
+                <a
+                  key={post._id}
+                  href={post.imageUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group relative aspect-square overflow-hidden rounded-lg bg-gray-100 shadow-sm hover:shadow-xl transition-all block border-2 border-transparent hover:border-[#D4AF37]"
+                >
+                  <img
+                    src={post.imageUrl}
+                    alt={post.title}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                    <span className="text-white font-bold text-sm line-clamp-2">
+                      {post.title}
+                    </span>
+                  </div>
+                </a>
+              ))}
             </div>
+          ) : (
+             <div className="bg-gray-50 p-8 rounded border-2 border-dashed border-[#D4AF37]/30 text-center text-gray-500 font-medium">
+               No pictures uploaded yet.
+             </div>
           )}
         </div>
 

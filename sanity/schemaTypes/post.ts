@@ -47,7 +47,17 @@ export const post = defineType({
       hidden: ({ document }) => document?.postType !== 'video'
     }),
 
-    // 3. Hides if "YouTube Video" is selected (Because videos use YouTube thumbnails)
+    // 3. NEW: Only shows if "YouTube Video" is selected
+    defineField({
+      name: 'videoThumbnail',
+      title: 'YouTube Video Thumbnail',
+      type: 'image',
+      description: 'Upload a custom thumbnail specifically for your YouTube video here.',
+      options: { hotspot: true },
+      hidden: ({ document }) => document?.postType !== 'video'
+    }),
+
+    // 4. Hides if "YouTube Video" is selected
     defineField({
       name: 'mainImage',
       title: 'Cover Photo',
