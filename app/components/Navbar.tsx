@@ -13,7 +13,8 @@ export default function Navbar() {
     <nav className="fixed w-full z-50 bg-white/90 backdrop-blur-md border-b-2 border-[#D4AF37]/20 text-black transition-all shadow-sm">
       <div className="max-w-[1400px] mx-auto px-6 md:px-12 h-20 flex items-center justify-between">
         
-        {/* BRAND / LOGO - Now using "invert" to show up perfectly on white! */}
+        {/* BRAND / LOGO (Image Version) */}
+        {/* The 'invert' class turns a white logo into a black logo for the bright theme */}
         <Link href="/" className="z-50 flex items-center">
           <img 
             src="/logo.svg" 
