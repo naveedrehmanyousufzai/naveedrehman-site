@@ -41,7 +41,7 @@ export default async function HomePage() {
           {/* THE RESTORED BACKGROUND IMAGE */}
           <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
             <img 
-              src="/cover.jpg" /* <-- REPLACE "/cover.jpg" WITH YOUR ACTUAL IMAGE FILE NAME */
+              src="/hero.png" /* <--- FULLY UPDATED TO YOUR hero.png FILE */
               alt="Squash Court Background" 
               className="w-full h-full object-cover opacity-[0.08]" 
             />
