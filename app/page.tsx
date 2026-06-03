@@ -43,22 +43,22 @@ export default async function HomePage() {
             <img 
               src="/hero.png" 
               alt="Squash Court Background" 
-              className="w-full h-full object-cover opacity-30" /* <--- OPACITY INCREASED TO 30% SO YOU CAN SEE IT! */
+              className="w-full h-full object-cover opacity-100" /* <--- OPACITY IS AT 100% SO IT IS FULLY VISIBLE */
             />
             {/* Gradient fades the bottom of the image smoothly into the white page */}
-            <div className="absolute inset-0 bg-gradient-to-t from-white via-white/50 to-transparent"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-transparent"></div>
             {/* Adds a slight golden glow behind the text */}
-            <div className="absolute top-1/2 left-0 -translate-y-1/2 w-[600px] h-[300px] bg-[#D4AF37] opacity-[0.03] rounded-full blur-3xl"></div>
+            <div className="absolute top-1/2 left-0 -translate-y-1/2 w-[600px] h-[300px] bg-[#D4AF37] opacity-[0.05] rounded-full blur-3xl"></div>
           </div>
 
           <div className="max-w-3xl relative z-10">
             <span className="text-[#D4AF37] font-black uppercase tracking-widest text-sm block mb-4">
               Official Platform
             </span>
-            <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter mb-6 leading-tight text-black">
+            <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter mb-6 leading-tight text-black drop-shadow-md">
               NAVEED <span className="text-[#D4AF37]">REHMAN</span>
             </h1>
-            <p className="text-gray-600 text-lg md:text-xl font-medium max-w-2xl leading-relaxed mb-8">
+            <p className="text-gray-800 text-lg md:text-xl font-medium max-w-2xl leading-relaxed mb-8 drop-shadow-sm bg-white/40 backdrop-blur-sm p-4 rounded-lg">
               Professional Squash Athlete & Secretary of the Sindh Squash Association. Explore official tournament draws, career archives, and the latest media updates.
             </p>
             <div className="flex flex-wrap gap-4">
