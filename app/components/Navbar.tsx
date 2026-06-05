@@ -13,13 +13,16 @@ export default function Navbar() {
     <nav className="fixed w-full z-50 bg-white/90 backdrop-blur-md border-b-2 border-[#D4AF37]/20 text-black transition-all shadow-sm">
       <div className="max-w-[1400px] mx-auto px-6 md:px-12 h-20 flex items-center justify-between">
         
-        {/* BRAND / LOGO (Original Colors Restored) */}
-        <Link href="/" className="z-50 flex items-center">
+        {/* BRAND / LOGO & NAME */}
+        <Link href="/" className="z-50 flex items-center gap-3 group">
           <img 
             src="/logo.svg" 
             alt="Naveed Rehman Logo" 
-            className="h-10 md:h-12 w-auto object-contain" 
+            className="h-10 md:h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105" 
           />
+          <span className="text-xl md:text-2xl font-black uppercase tracking-tighter text-black">
+            Naveed <span className="text-[#D4AF37]">Rehman</span>
+          </span>
         </Link>
 
         {/* DESKTOP MENU */}
