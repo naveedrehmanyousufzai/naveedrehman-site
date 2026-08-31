@@ -1,4 +1,14 @@
+import type { Metadata } from 'next';
 import { createClient } from 'next-sanity';
+import Image from 'next/image';
+import { urlFor } from '@/lib/img';
+
+export const metadata: Metadata = {
+  title: 'News & Media',
+  description:
+    "Latest announcements, tournament reports, press releases, and featured videos from Naveed Rehman's professional squash career and the Sindh Squash Association.",
+  alternates: { canonical: '/news' },
+};
 
 // Initialize Sanity Client
 const client = createClient({
@@ -17,7 +27,9 @@ export default async function NewsPage() {
       _id,
       title,
       "imageUrl": mainImage.asset->url,
+      "imageBlur": mainImage.asset->metadata.lqip,
       "videoThumbnailUrl": videoThumbnail.asset->url,
+      "videoThumbnailBlur": videoThumbnail.asset->metadata.lqip,
       postType,
       youtubeLink,
       externalLink,
@@ -46,7 +58,11 @@ export default async function NewsPage() {
               // Determine if it is a video to show the play button
               const isVideo = post.postType === 'video' || post.youtubeLink;
               const link = isVideo ? post.youtubeLink : (post.externalLink || '#');
-              const image = post.videoThumbnailUrl || post.imageUrl || '/placeholder.jpg'; // Fallback to placeholder if no image
+              const imageSource = post.videoThumbnailUrl || post.imageUrl;
+              const imageBlur = post.videoThumbnailUrl ? post.videoThumbnailBlur : post.imageBlur;
+              const image = imageSource
+                ? urlFor(imageSource).width(900).fit('max').auto('format').url()
+                : '/placeholder.jpg'; // Fallback to placeholder if no image
 
               return (
                 <a
@@ -57,9 +73,13 @@ export default async function NewsPage() {
                   className="group flex flex-col bg-white rounded-lg overflow-hidden border-2 border-gray-200 hover:border-[#D4AF37] hover:-translate-y-1 transition-all duration-300 shadow-sm hover:shadow-xl"
                 >
                   <div className="relative aspect-video overflow-hidden bg-gray-100 border-b-2 border-transparent group-hover:border-[#D4AF37]/20 transition-colors">
-                    <img
+                    <Image
                       src={image}
                       alt={post.title}
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      placeholder={imageBlur ? 'blur' : 'empty'}
+                      blurDataURL={imageBlur || undefined}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     {/* Play Button Overlay for Videos */}

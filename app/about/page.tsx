@@ -1,11 +1,15 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { createClient } from 'next-sanity';
 
 // Force real-time updates when you publish changes
 export const revalidate = 0;
 
-export const metadata = {
-  title: 'About Naveed Rehman | Athlete & Administrator',
+export const metadata: Metadata = {
+  title: 'About',
+  description:
+    "The story behind Naveed Rehman — a PSA World Tour squash athlete and Secretary of the Sindh Squash Association driving junior development across Sindh.",
+  alternates: { canonical: '/about' },
 };
 
 // Connect to the database

@@ -48,5 +48,10 @@ export const siteSettings = defineType({
       title: 'YouTube URL',
       type: 'url',
     }),
+    defineField({
+      name: 'squashTv',
+      title: 'squash.tv Player Page URL',
+      type: 'url',
+    }),
   ],
 })

@@ -1,7 +1,20 @@
+import type { Metadata } from 'next';
 import { createClient } from 'next-sanity';
 import Link from 'next/link';
+import Image from 'next/image';
 import AnimatedSection from './components/AnimatedSection';
 import { getLatestYouTubeVideos } from './components/Lib/youtube';
+import { urlFor } from '@/lib/img';
+
+export const metadata: Metadata = {
+  title: {
+    absolute:
+      'Naveed Rehman | Professional Squash Athlete & Sindh Squash Association Secretary',
+  },
+  description:
+    'The official home of Naveed Rehman — PSA tour career, tournament draws, career archive, and the latest squash news from the Sindh Squash Association.',
+  alternates: { canonical: '/' },
+};
 
 const client = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
@@ -19,6 +32,7 @@ export default async function HomePage() {
       _id,
       title,
       "imageUrl": mainImage.asset->url,
+      "imageBlur": mainImage.asset->metadata.lqip,
       postType,
       externalLink,
       publishedAt
@@ -128,7 +142,15 @@ export default async function HomePage() {
                       className="group block bg-white rounded-lg overflow-hidden border-2 border-gray-200 hover:border-[#D4AF37] hover:-translate-y-1 transition-all duration-300 shadow-sm hover:shadow-lg"
                     >
                       <div className="relative h-48 overflow-hidden bg-gray-100">
-                        <img src={post.imageUrl || '/placeholder.jpg'} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <Image
+                          src={post.imageUrl ? urlFor(post.imageUrl).width(900).fit('max').auto('format').url() : '/placeholder.jpg'}
+                          alt={post.title}
+                          fill
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                          placeholder={post.imageBlur ? 'blur' : 'empty'}
+                          blurDataURL={post.imageBlur || undefined}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
                       </div>
                       <div className="p-6">
                         <div className="text-[10px] text-[#D4AF37] font-bold uppercase tracking-widest mb-2">
@@ -160,7 +182,15 @@ export default async function HomePage() {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {pictures.map((post: any) => (
                   <a key={post._id} href={post.imageUrl} target="_blank" rel="noopener noreferrer" className="group relative aspect-square overflow-hidden rounded-lg bg-gray-100 shadow-sm hover:shadow-xl transition-all block border-2 border-transparent hover:border-[#D4AF37]">
-                    <img src={post.imageUrl} alt={post.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                    <Image
+                      src={urlFor(post.imageUrl).width(900).fit('max').auto('format').url()}
+                      alt={post.title}
+                      fill
+                      sizes="(max-width: 768px) 50vw, 33vw"
+                      placeholder={post.imageBlur ? 'blur' : 'empty'}
+                      blurDataURL={post.imageBlur || undefined}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
                       <span className="text-white font-bold text-sm line-clamp-2">{post.title}</span>
                     </div>
